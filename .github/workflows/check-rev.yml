@@ -1,0 +1,66 @@
+# Guard the one invariant the whole merge design rests on.
+#
+# merge_save.py resolves an editor's baseRev to "the newest commit on main whose
+# ctls-data.json carries that rev". That only works if a rev identifies exactly one
+# version of the file. A hand edit to main that changes content WITHOUT bumping
+# _meta.rev creates two commits sharing a rev: an editor whose tab loaded the older
+# one then resolves their base to the NEWER one, so every field the hand edit touched
+# reads as "unchanged from base" and their save silently reverts it. Clean merge, no
+# conflict, no issue -- the fix just disappears.
+#
+# Nothing in the code enforced this; it was a habit. Now it is a check.
+name: Check data revision
+
+on:
+  push:
+    branches: [main]
+    paths: ['ctls-data.json']
+
+permissions:
+  contents: read
+
+jobs:
+  rev:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: ctls-data.json changed, so _meta.rev must have increased
+        run: |
+          python3 - <<'PY'
+          import json, subprocess, sys
+
+          def rev_at(ref):
+              try:
+                  blob = subprocess.run(
+                      ["git", "show", "%s:ctls-data.json" % ref],
+                      capture_output=True, text=True, check=True).stdout
+              except subprocess.CalledProcessError:
+                  return None          # file did not exist yet
+              try:
+                  return json.loads(blob).get("_meta", {}).get("rev")
+              except json.JSONDecodeError:
+                  print("::error::ctls-data.json at %s is not valid JSON" % ref)
+                  sys.exit(1)
+
+          new = rev_at("HEAD")
+          old = rev_at("HEAD~1")
+
+          if new is None:
+              print("::error::ctls-data.json has no _meta.rev. Every published version needs one.")
+              sys.exit(1)
+          if old is None:
+              print("first version of the file (rev %s) - nothing to compare" % new)
+              sys.exit(0)
+          if new > old:
+              print("rev %s -> %s, good" % (old, new))
+              sys.exit(0)
+
+          print("::error::ctls-data.json changed but _meta.rev did not increase "
+                "(%s -> %s). Two commits sharing a rev break baseRev resolution: the "
+                "next editor save can silently revert this change. Bump _meta.rev and "
+                "push again." % (old, new))
+          sys.exit(1)
+          PY

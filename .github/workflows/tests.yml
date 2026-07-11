@@ -1,0 +1,29 @@
+# The merge bot is the one component that can destroy published work, and until now
+# nothing ran its tests. Run them on every change to the scripts (and to the live
+# catalogue, since the suite merges the real file).
+name: Merge tests
+
+on:
+  push:
+    paths:
+      - '.github/scripts/**'
+      - '.github/workflows/tests.yml'
+      - 'ctls-data.json'
+  pull_request:
+    paths:
+      - '.github/scripts/**'
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Run the three-way merge suite
+        working-directory: .github/scripts
+        run: python3 -m unittest test_merge_catalogue -v
