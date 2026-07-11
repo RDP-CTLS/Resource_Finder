@@ -1,0 +1,6 @@
+.DS_Store
+_*
+
+# Internal CTLS planning data — must never ship to the public site
+ctls-planning.js
+Brightspace-rewrite-worklist-*.md

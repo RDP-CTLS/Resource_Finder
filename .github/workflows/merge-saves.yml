@@ -1,0 +1,34 @@
+# Merge bot: publish editor saves from save/<name> branches into main.
+# save/* branches are append-only mailboxes written by an automated upload flow;
+# this workflow three-way merges each save and is the ONLY writer of main.
+name: Merge editor saves
+
+on:
+  push:
+    branches:
+      - 'save/**'
+
+# one merge at a time, in order; never cancel a merge in flight
+concurrency:
+  group: merge-to-main
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  merge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0   # full history: the driver resolves baseRev in main history
+
+      - name: Merge the save into main
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SAVE_BRANCH: ${{ github.ref_name }}
+          SAVE_SHA: ${{ github.event.after }}
+        run: python3 .github/scripts/merge_save.py

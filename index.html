@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Resource Finder | CTLS</title>
+<style>
+  :root{
+    --purple:#6b4e9e; --purple-deep:#54397e; --lime:#8cc63e; --orange:#f3992f;
+    --ink:#33303e; --ink-soft:#6a6678; --bg:#f4f2f7; --card:#ffffff; --line:#e7e3ef;
+    --t-purple:#f3effa; --t-lime:#f2f8e6; --t-orange:#fdf2e4;
+    --teal:#1d7a8c; --teal-deep:#155e6d; --t-teal:#e3f2f5;
+    --amber:#8a5410; --amber-soft:#fdf0dd; --violet:#685BC7; --forest:#54397e;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;} html{-webkit-font-smoothing:antialiased;scroll-behavior:smooth;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.6;}
+  a{color:var(--purple-deep);} button{font-family:inherit;}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 1.4rem;}
+  header.top{background:#fff;color:var(--ink);border-top:4px solid var(--purple);border-bottom:1px solid var(--line);position:relative;z-index:5;}
+  .top .wrap{display:flex;align-items:center;gap:1rem;padding:.75rem 1.4rem;flex-wrap:wrap;}
+  .brand{display:flex;align-items:center;gap:.65rem;font-weight:800;letter-spacing:.01em;}
+  .brand>span{font-weight:800;font-size:1.05rem;color:var(--ink);}
+  .brand small{display:block;font-weight:600;font-size:.7rem;color:var(--ink-soft);letter-spacing:.02em;}
+  .top .spacer{flex:1;}
+  .hero{padding:3.1rem 0 1.5rem;}
+  .eyebrow{font-size:.78rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--purple);}
+  .hero h1{font-size:2.4rem;line-height:1.12;margin:.45rem 0 .3rem;letter-spacing:-.02em;}
+  .hero .lead{color:var(--ink-soft);max-width:46rem;margin:.3rem 0 1.3rem;}
+  .hairline{height:3px;width:64px;background:var(--purple-deep);margin:.2rem 0 0;}
+  .searchbar{display:flex;align-items:center;gap:.6rem;background:var(--bg);border:1.5px solid var(--line);border-radius:10px;padding:.45rem .85rem;flex:0 1 340px;min-width:210px;}
+  .searchbar:focus-within{border-color:var(--purple);}
+  :where(.tile,.rescard,.reltag,.expand,.back,a):focus-visible{outline:2px solid var(--purple);outline-offset:2px;}
+  .searchbar input{border:0;outline:0;font-size:.95rem;flex:1;background:none;color:var(--ink);}
+  .searchbar svg{flex:0 0 auto;}
+  .toggles{display:flex;flex-wrap:wrap;gap:.4rem 1.7rem;margin-top:1.05rem;}
+  .aitoggle{display:inline-flex;align-items:center;gap:.55rem;width:fit-content;font-size:.86rem;color:var(--ink-soft);cursor:pointer;}
+
+  .aitoggle input{appearance:none;-webkit-appearance:none;width:36px;height:20px;border-radius:999px;background:#c4cdc8;position:relative;cursor:pointer;transition:.15s;flex:0 0 auto;margin:0;border:0;}
+  .aitoggle input::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:.15s;}
+  .aitoggle input:checked{background:var(--purple);}
+  .aitoggle input:checked::after{left:18px;}
+  .aitoggle input:focus-visible{outline:2px solid var(--purple);outline-offset:2px;}
+  .notice{background:var(--t-purple);border-left:4px solid var(--purple);border-radius:0 10px 10px 0;padding:.5rem .85rem;font-size:.82rem;color:var(--ink-soft);margin:1.05rem 0 0;max-width:44rem;}
+  .notice b{color:var(--ink);}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:1.1rem;margin:1.5rem 0 2.6rem;}
+  .tile{text-align:left;background:var(--card);border:0;border-top:4px solid var(--purple);border-radius:12px;padding:1.3rem 1.35rem 1.35rem;cursor:pointer;transition:.13s;display:flex;flex-direction:column;gap:.55rem;}
+  .grid .tile:nth-child(3n+1){border-top-color:var(--purple);background:var(--t-purple);}
+  .grid .tile:nth-child(3n+2){border-top-color:var(--lime);background:var(--t-lime);}
+  .grid .tile:nth-child(3n){border-top-color:var(--orange);background:var(--t-orange);}
+  .tile:hover{transform:translateY(-2px);filter:brightness(.985);}
+  .tile .ico{width:38px;height:38px;background:#fff;color:var(--purple-deep);border-radius:9px;display:flex;align-items:center;justify-content:center;}
+  .grid .tile:nth-child(3n+2) .ico{color:#4f7a10;}
+  .grid .tile:nth-child(3n) .ico{color:#a35c0a;}
+  .tile h3{margin:.1rem 0 0;font-size:1.08rem;}
+  .tile p{margin:0;font-size:.86rem;color:var(--ink-soft);line-height:1.45;}
+  .tile .count{margin-top:auto;font-size:.76rem;font-weight:800;letter-spacing:.03em;text-transform:uppercase;color:var(--purple-deep);display:inline-flex;align-items:center;gap:.35rem;}
+  .grid .tile:nth-child(3n+2) .count{color:#4f7a10;}
+  .grid .tile:nth-child(3n) .count{color:#a35c0a;}
+  .tile.dev{outline:1.5px dashed #c9bfe0;outline-offset:-6px;}
+  .chip{display:inline-flex;align-items:center;gap:.35rem;font-size:.72rem;font-weight:700;border-radius:999px;padding:.24rem .68rem;letter-spacing:.02em;}
+  .chip.refresh{background:var(--amber-soft);color:var(--amber);}
+  .chip.moved{background:#e8eef9;color:var(--violet);}
+  .chip.dev{background:var(--amber-soft);color:var(--amber);}
+  .chip.update{background:#e7eefb;color:#2456a6;}
+  .chip.read{background:var(--t-purple);color:var(--purple-deep);}
+  .chip.fmt{background:#efedf3;color:var(--ink-soft);}
+  .back{background:none;border:0;color:var(--purple-deep);font-weight:700;cursor:pointer;padding:.3rem 0;display:inline-flex;align-items:center;gap:.4rem;font-size:.92rem;}
+  .topic-head{margin:.55rem 0 1.3rem;}
+  .topic-head h2{font-size:1.6rem;margin:.2rem 0 .3rem;}
+  .topic-head .blurb{color:var(--ink-soft);max-width:44rem;}
+  .starthere{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:1.3rem 1.5rem;margin:0 0 1.5rem;}
+  .starthere .k{font-size:.78rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--purple-deep);}
+  .starthere ol{margin:.75rem 0 0;padding-left:0;list-style:none;counter-reset:s;display:flex;flex-direction:column;}
+  .starthere li{counter-increment:s;position:relative;display:flex;gap:.7rem;align-items:flex-start;padding-bottom:1.1rem;}
+  .starthere li:last-child{padding-bottom:0;}
+  /* stepper connector between the numbered dots */
+  .starthere li:not(:last-child)::after{content:"";position:absolute;left:calc(.75rem - 1px);top:1.65rem;bottom:.15rem;width:2px;background:var(--line);}
+  .starthere li::before{content:counter(s);flex:0 0 auto;width:1.5rem;height:1.5rem;border-radius:50%;background:var(--purple);color:#fff;font-weight:800;font-size:.78rem;display:flex;align-items:center;justify-content:center;margin-top:1px;position:relative;z-index:1;}
+  .starthere a{color:var(--ink);font-weight:600;text-decoration:none;cursor:pointer;}
+  .starthere a:hover{color:var(--purple-deep);}
+  .rescard{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--lime);border-radius:12px;margin:0 0 1rem;overflow:hidden;transition:border-color .13s,box-shadow .13s;}
+  .rescard:hover{border-left-color:var(--purple);box-shadow:0 2px 10px rgba(51,48,62,.07);}
+  .rescard .body{padding:1.25rem 1.35rem;}
+  .rescard h4{margin:0 0 .15rem;font-size:1.08rem;}
+  .rescard .one{color:var(--ink-soft);font-size:.92rem;margin:.25rem 0 .55rem;}
+  .rescard .meta{display:flex;flex-wrap:wrap;gap:.45rem;align-items:center;}
+  .rescard .more{margin-top:.8rem;border-top:1px dashed var(--line);padding-top:.9rem;display:none;}
+  .rescard.open .more{display:block;}
+  .rescard .expand{display:block;background:none;border:0;color:var(--purple-deep);font-weight:700;font-size:.85rem;cursor:pointer;margin-top:.7rem;padding:0;}
+  .openrow{margin:.25rem 0 .15rem;}
+  .openres{display:inline-flex;align-items:center;gap:.4rem;background:var(--purple);color:#fff;font-weight:700;font-size:.85rem;text-decoration:none;border-radius:8px;padding:.5rem 1rem;}
+  .openres:hover{background:var(--purple-deep);}
+  /* Provenance colour system: every info block inside a card is tinted by where
+     the information came from - purple = the resource PDF itself, green = written
+     by CTLS for RDP, teal = added from published outside research (source linked). */
+  .infoblock{margin:.6rem 0;border-radius:10px;padding:.75rem .95rem;font-size:.88rem;}
+  .infoblock .blab{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;font-weight:800;font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.3rem;}
+  .infoblock p{margin:0;}
+  .infoblock ul{margin:.1rem 0 0;padding-left:1.15rem;}
+  .infoblock li{margin:.22rem 0;}
+  .infoblock.inside{background:var(--t-purple);} .infoblock.inside .blab{color:var(--purple-deep);}
+  .infoblock.ctls{background:var(--t-lime);} .infoblock.ctls .blab{color:#4f7a10;}
+  .infoblock.research{background:var(--t-teal);} .infoblock.research .blab{color:var(--teal-deep);}
+  .infoblock.gated{background:var(--t-orange);} .infoblock.gated .blab{color:#a35c0a;}
+  .cite{color:var(--teal-deep);font-size:.8rem;font-weight:700;}
+  .prov{display:inline-block;font-size:.62rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;border-radius:4px;padding:.12rem .45rem;white-space:nowrap;background:#fff;}
+  .prov.res{color:var(--purple-deep);box-shadow:inset 0 0 0 1px #d8cbee;}
+  .prov.ctls{color:#4f7a10;box-shadow:inset 0 0 0 1px #cfe0ae;}
+  .prov.ext{color:var(--teal-deep);box-shadow:inset 0 0 0 1px #bcdde4;}
+  .provkey{display:flex;flex-wrap:wrap;gap:.3rem .9rem;align-items:center;font-size:.82rem;color:var(--ink-soft);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.7rem 1rem;margin:1.1rem 0 0;}
+  .provkey .kt{font-weight:800;font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:var(--ink);}
+  .provkey .pair{display:inline-flex;align-items:center;gap:.4rem;}
+  .rel{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.3rem;}
+  .reltag{background:var(--t-purple);border:0;border-radius:8px;color:var(--purple-deep);font-size:.8rem;padding:.3rem .6rem;cursor:pointer;}
+  .reltag:hover{background:#e7ddf5;}
+  .starthere .mini-pdf{background:var(--t-purple);color:var(--purple-deep);font-size:.7rem;font-weight:800;letter-spacing:.03em;border-radius:6px;padding:.12rem .5rem;text-decoration:none;margin-left:.5rem;border-bottom:0;white-space:nowrap;}
+  .starthere .mini-pdf:hover{background:#e7ddf5;border-bottom:0;}
+  .chip.topic{background:var(--t-purple);color:var(--purple-deep);}
+  .usewhen{font-size:.85rem;color:var(--ink-soft);margin:.15rem 0 .5rem;}
+  .usewhen .uw{font-weight:800;font-size:.66rem;text-transform:uppercase;letter-spacing:.05em;color:#4f7a10;margin-right:.4rem;}
+  .jumps{font-size:.82rem;margin:.35rem 0 .35rem;display:flex;flex-wrap:wrap;gap:.15rem .8rem;align-items:baseline;}
+  .jumps .jlab{font-weight:800;font-size:.66rem;text-transform:uppercase;letter-spacing:.05em;color:var(--purple-deep);}
+  .jumps a{white-space:nowrap;}
+  .taskrow{margin-top:1.15rem;}
+  .modetabs{display:inline-flex;background:var(--card);border:1.5px solid var(--line);border-radius:999px;padding:.25rem;gap:.25rem;}
+  .modetab{border:0;background:none;border-radius:999px;padding:.42rem 1.1rem;font-weight:700;font-size:.88rem;color:var(--ink-soft);cursor:pointer;transition:.13s;}
+  .modetab.on{background:var(--purple);color:#fff;}
+  .modetab:not(.on):hover{color:var(--purple-deep);}
+  .modetab:focus-visible{outline:2px solid var(--purple);outline-offset:2px;}
+  .starthere .stepnote{color:var(--ink-soft);font-size:.88rem;}
+  .devpanel{background:var(--amber-soft);border:1px solid #f0d9bd;border-radius:12px;padding:1.3rem 1.4rem;}
+  .devpanel h3{margin:0 0 .4rem;color:var(--amber);}
+  .devpanel p{margin:.3rem 0;color:#7a5a2a;font-size:.94rem;}
+  .gloss-item{padding:.8rem 0;border-bottom:1px solid var(--line);}
+  .gloss-item b{color:var(--purple-deep);}
+  .gloss-item .src{font-size:.78rem;color:var(--ink-soft);margin-top:.2rem;}
+  footer{color:var(--ink-soft);font-size:.82rem;padding:2rem 0 3rem;border-top:1px solid var(--line);margin-top:2rem;}
+  footer a{color:var(--purple-deep);}
+  .hidden{display:none;}
+  .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);}
+  .secthead{font-size:.78rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--purple);margin:1.6rem 0 .4rem;}
+  @media (max-width:560px){ .hero h1{font-size:1.6rem;} }
+
+  /* ============================================================
+     Phase 0 inline editor. Everything below is editor-only chrome.
+     It renders ONLY when the page is opened with ?edit in the URL
+     (the "separate edit link"), so readers on the plain Finder URL
+     never see any of it. In Phase 1 the save step is gated by GitHub
+     sign-in; today saving = download the file for an owner to commit.
+     ============================================================ */
+  .editbar{background:var(--t-orange);border:1px solid #f0d9bd;border-radius:12px;padding:.8rem 1rem;margin:1.1rem 0 0;font-size:.86rem;color:#7a5a2a;}
+  .editbar b{color:var(--amber);}
+  .editbar p{margin:0 0 .6rem;}
+  .editbar a{color:#7a5a2a;font-weight:700;}
+  .editbar .ebrow{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;}
+  .pendbadge{background:var(--amber);color:#fff;border-radius:999px;font-weight:800;font-size:.78rem;padding:.3rem .75rem;}
+  /* post-apply "step 2" banner + unsent-changes restore offer */
+  .savedbar{background:var(--t-lime);border:1px solid #cde3a4;border-radius:12px;padding:.8rem 1rem;margin:1.1rem 0 0;font-size:.9rem;color:#3c5a10;display:flex;flex-wrap:wrap;align-items:center;gap:.7rem;}
+  .savedbar .msg{flex:1 1 24rem;margin:0;}
+  .savedbar a{color:#3c5a10;font-weight:700;}
+  .restorebar{background:var(--t-purple);border:1px solid #d9cfec;border-radius:12px;padding:.8rem 1rem;margin:1.1rem 0 0;font-size:.9rem;color:var(--purple-deep);display:flex;flex-wrap:wrap;align-items:center;gap:.7rem;}
+  .restorebar .msg{flex:1 1 24rem;margin:0;}
+  /* the header search is a no-op while the form is open, so hide it (finding H) */
+  body.editing-form .searchbar{display:none;}
+  .ebtn{border:0;border-radius:8px;font-weight:700;font-size:.85rem;padding:.5rem .95rem;cursor:pointer;font-family:inherit;}
+  .ebtn.primary{background:var(--purple);color:#fff;} .ebtn.primary:hover{background:var(--purple-deep);}
+  .ebtn.primary:disabled{background:#c7bfe0;cursor:not-allowed;}
+  .ebtn.ghost{background:var(--card);color:var(--purple-deep);border:1.5px solid var(--line);} .ebtn.ghost:hover{border-color:var(--purple);}
+  .ebtn:focus-visible{outline:2px solid var(--purple);outline-offset:2px;}
+  /* labelled edit chip on each card (44px target, finding J) */
+  .rescard{position:relative;}
+  .cardpencil{position:absolute;top:.6rem;right:.6rem;z-index:2;min-height:44px;display:inline-flex;align-items:center;gap:.35rem;padding:.4rem .9rem;border-radius:999px;border:1.5px solid var(--purple);background:#fff;color:var(--purple-deep);font-weight:700;font-size:.85rem;cursor:pointer;line-height:1;font-family:inherit;}
+  .cardpencil:hover{background:var(--t-purple);}
+  .cardpencil:focus-visible{outline:2px solid var(--purple);outline-offset:2px;}
+  body:not(.edit-on) .cardpencil{display:none;}
+  /* keep card titles clear of the chip (only where the chip actually renders) */
+  body.edit-on:not(.editing-form) .rescard h4{padding-right:6.5rem;}
+  /* the edit form; at wide viewports the preview docks sticky beside it (finding E) */
+  .editform{max-width:760px;}
+  .editform .fhead{margin:.4rem 0 1.1rem;}
+  .editform .fhead .eyebrow{color:var(--purple);}
+  .editform h2{font-size:1.5rem;margin:.15rem 0 .2rem;}
+  .editform .fhint{color:var(--ink-soft);font-size:.9rem;margin:0;}
+  .editcols{display:grid;grid-template-columns:minmax(0,1fr);gap:0 1.6rem;align-items:start;}
+  @media (min-width:1100px){
+    .editcols{grid-template-columns:minmax(0,1fr) 360px;}
+    .editcols>.editprev{grid-column:2;grid-row:1;position:sticky;top:1rem;max-height:calc(100vh - 2rem);overflow:auto;margin-top:0;}
+    .editcols>.editform{grid-column:1;grid-row:1;}
+  }
+  .efgroup{border-left:4px solid var(--line);border-radius:0 10px 10px 0;background:var(--card);border:1px solid var(--line);border-left-width:4px;padding:1rem 1.15rem;margin:1rem 0;}
+  .efgroup.res{border-left-color:var(--purple);background:var(--t-purple);}
+  .efgroup.ctls{border-left-color:var(--lime);background:var(--t-lime);}
+  .efgroup.ext{border-left-color:var(--teal);background:var(--t-teal);}
+  .efgroup.identity{border-left-color:var(--ink-soft);}
+  .efgroup .gt{font-weight:800;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;margin:0 0 .1rem;display:flex;align-items:center;gap:.5rem;}
+  .efgroup.res .gt{color:var(--purple-deep);} .efgroup.ctls .gt{color:#4f7a10;} .efgroup.ext .gt{color:var(--teal-deep);}
+  .efgroup .gsub{font-size:.8rem;color:var(--ink-soft);margin:0 0 .7rem;}
+  .field{margin:.7rem 0;}
+  .field>label{display:block;font-weight:700;font-size:.85rem;margin-bottom:.25rem;color:var(--ink);}
+  .field .help{font-weight:400;color:var(--ink-soft);font-size:.8rem;}
+  .field input[type=text],.field input[type=url],.field input[type=number],.field textarea,.field select{
+    width:100%;border:1.5px solid var(--line);border-radius:8px;padding:.5rem .65rem;font-size:.92rem;font-family:inherit;background:#fff;color:var(--ink);}
+  .field textarea{min-height:4.2rem;resize:vertical;line-height:1.5;}
+  .field input:focus,.field textarea:focus,.field select:focus{outline:0;border-color:var(--purple);}
+  .field.req>label::after{content:" *";color:#b4185d;font-weight:800;}
+  .listrow{display:flex;gap:.5rem;align-items:flex-start;margin:.4rem 0;}
+  .listrow input{flex:1;}
+  .listrow input.pagecell{flex:0 0 5.5rem;}
+  .delrow{flex:0 0 auto;border:1.5px solid var(--line);background:#fff;color:#b4185d;border-radius:8px;width:34px;height:34px;cursor:pointer;font-size:1rem;line-height:1;}
+  .delrow:hover{border-color:#b4185d;}
+  .addrow{border:1.5px dashed var(--line);background:none;color:var(--purple-deep);border-radius:8px;padding:.35rem .8rem;font-weight:700;font-size:.82rem;cursor:pointer;margin-top:.2rem;}
+  .addrow:hover{border-color:var(--purple);background:var(--t-purple);}
+  .relgrid{display:grid;grid-template-columns:1fr 1fr;gap:.2rem .9rem;}
+  .relgrid label{display:flex;gap:.4rem;align-items:flex-start;font-size:.85rem;font-weight:400;color:var(--ink);cursor:pointer;}
+  /* each research note is its own sub-card so notes read as units (finding F) */
+  .notecard{border:1px solid var(--line);background:#fff;border-radius:10px;padding:.65rem .8rem .8rem;margin:.55rem 0;}
+  .notecard .nhead{display:flex;align-items:center;gap:.6rem;margin-bottom:.4rem;}
+  .notecard .nlab{font-weight:800;font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:var(--teal-deep);}
+  .notecard input{width:100%;}
+  .notecard .nrow{display:flex;gap:.5rem;margin-top:.45rem;}
+  .notecard .nrow input{flex:1;}
+  .delnote{margin-left:auto;border:1.5px solid var(--line);background:#fff;color:#b4185d;border-radius:8px;font-size:.78rem;font-weight:700;padding:.3rem .6rem;cursor:pointer;font-family:inherit;}
+  .delnote:hover{border-color:#b4185d;}
+  .editprev{border:1px dashed var(--purple);border-radius:12px;padding:.4rem .9rem .9rem;margin:.3rem 0 1rem;background:#fbfaff;}
+  .editprev .pvlab{font-weight:800;font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:var(--purple);margin:.6rem 0 .2rem;}
+  .editerrs{background:#fdeef4;border:1px solid #f3cfe0;border-radius:10px;padding:.6rem .9rem;margin:.6rem 0;font-size:.86rem;color:#8a1a4d;}
+  .editerrs ul{margin:.2rem 0 0;padding-left:1.15rem;} .editerrs li{margin:.15rem 0;}
+  /* inline field errors + the error line beside the Apply button (finding C) */
+  .ferr{color:#8a1a4d;font-size:.8rem;font-weight:600;margin-top:.25rem;}
+  .field.haserr input,.field.haserr textarea,.field.haserr select{border-color:#b4185d;}
+  .errline{color:#8a1a4d;font-size:.85rem;font-weight:600;}
+  .errjump{background:none;border:0;padding:0;color:#8a1a4d;text-decoration:underline;cursor:pointer;font:inherit;font-weight:700;}
+  .editactions{display:flex;gap:.6rem;flex-wrap:wrap;margin:1.2rem 0 0;align-items:center;}
+  .editactions .note{color:var(--ink-soft);font-size:.8rem;}
+  @media (max-width:560px){
+    .relgrid{grid-template-columns:1fr;}
+    .listrow{flex-wrap:wrap;}
+    .listrow input.pagecell{flex:1 1 5.5rem;}
+    .notecard .nrow{flex-direction:column;}
+    .editbar .ebrow,.savedbar,.restorebar{flex-direction:column;align-items:stretch;}
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <span>Resource Finder<small>Centre of Teaching, Learning &amp; Scholarship</small></span>
+    </div>
+    <div class="spacer"></div>
+    <div class="searchbar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5b6770" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg><input id="q" type="search" placeholder="Search resources and terms" aria-label="Search resources and terms"></div>
+  </div>
+</header>
+
+<main class="wrap" id="main">
+  <!-- views injected by JS -->
+</main>
+
+<footer class="wrap">
+  <p id="foot-note"></p>
+</footer>
+
+<div aria-live="polite" class="visually-hidden" id="live"></div>
+
+<!-- ctls-data.js is a file:// fallback only; the primary content source is
+     ctls-data.json, fetched at runtime (see loadData() below). Over http (GitHub
+     Pages, python3 -m http.server) the JSON wins; the .js keeps a plain file open working. -->
+<script src="ctls-data.js"></script>
+<script>
+(function(){
+  // Mutable container: populated from ctls-data.json on boot, and edited in place
+  // by the (Phase 0) inline editor. Kept as one object so every closure sees updates.
+  var D = {meta:{},topics:[],resources:[],tasks:[],glossary:[],edges:[]};
+  var main = document.getElementById('main');
+  var live = document.getElementById('live');
+  var state = {view:'home', topic:null, task:null, q:'', ai:false, indig:false, mode:'topics', edit:false, editCtx:null};
+
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function byTitle(t){for(var i=0;i<D.resources.length;i++){if(D.resources[i].title===t)return D.resources[i];}return null;}
+  function topicByName(n){for(var i=0;i<D.topics.length;i++){if(D.topics[i].name===n)return D.topics[i];}return null;}
+  function topicResources(topicName){return D.resources.filter(function(r){return r.topic===topicName;});}
+
+  var ICONS={
+    compass:'<circle cx="12" cy="12" r="9"/><polygon points="16,8 11,11 8,16 13,13"/>',
+    check:'<path d="M4 12l5 5L20 6"/>',
+    spark:'<path d="M12 3v6M12 15v6M3 12h6M15 12h6"/>',
+    signal:'<path d="M4 18h2M9 18h2v-5M14 18h2V9M19 18h1V4"/>',
+    loop:'<path d="M4 9a8 8 0 0 1 14-4M20 15a8 8 0 0 1-14 4"/><path d="M18 3v3h-3M6 21v-3h3"/>',
+    leaf:'<path d="M5 19c0-7 5-12 14-12 0 9-5 14-12 14 0-4 3-7 7-8"/>',
+    sprout:'<path d="M12 21v-7M12 14c0-3-2-5-6-5 0 4 2 5 6 5zM12 12c0-3 2-6 6-6 0 4-2 6-6 6z"/>',
+    ai:'<rect x="5" y="5" width="14" height="14" rx="3"/><path d="M9 15V9l3 4 3-4v6"/>',
+    dot:'<circle cx="12" cy="12" r="4"/>'
+  };
+  function icon(name,size){var s=size||22;return '<svg width="'+s+'" height="'+s+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(ICONS[name]||ICONS.dot)+'</svg>';}
+
+  function statusChip(r){
+    if(r.status==='refreshing') return '<span class="chip refresh">Being refreshed</span>';
+    if(r.status==='moved') return '<span class="chip moved">Now in the Library</span>';
+    return '';
+  }
+
+  /* ---------- TEACHER MODE ---------- */
+  function homeTiles(){
+    return D.topics.filter(function(t){return t.name!=='AI (cross-cutting)';}).map(function(t){
+      var indg = t.name==='Indigenizing my teaching';
+      var dev = t.state!=='active' && !indg;
+      var count = indg ? 'Curated links + framework' : dev ? 'In development' : topicResources(t.name).length+' resource'+(topicResources(t.name).length===1?'':'s');
+      return '<button class="tile'+(dev?' dev':'')+'" data-topic="'+esc(t.name)+'">'
+        +'<span class="ico">'+icon(t.icon,22)+'</span>'
+        +'<h3>'+esc(t.name)+'</h3>'
+        +'<p>'+esc(shortBlurb(t.blurb))+'</p>'
+        +'<span class="count">'+(dev?icon('dot',13):'')+esc(count)+'</span>'
+      +'</button>';
+    }).join('');
+  }
+  // The search input lives in the static header (bound once at boot), so it is
+  // never rebuilt and never loses focus. Typing repaints #results on the home
+  // shell, or re-renders the shell when searching from a topic/task view.
+  // The colour key is NOT on the home shell: it belongs where cards render.
+  function teacherShell(){
+    return ''
+    +'<section class="hero">'
+      +'<h1>Find a teaching resource</h1>'
+      +'<div class="hairline"></div>'
+      +'<p class="lead">Pick a topic or a task below, or search across every resource and glossary term.</p>'
+      +taskChips()
+      +'<div class="toggles">'+aiToggle()+indigToggle()+'</div>'
+      +'<div class="notice">A few resources still mention <b>Blackboard</b>; they carry a "Brightspace update" chip until their refresh lands.</div>'
+    +'</section>'
+    +'<div id="results">'+resultsBody()+'</div>';
+  }
+  function resultsBody(){
+    if(state.view==='search' && (state.q||'').trim().length>=2) return searchBody(state.q);
+    return '<div class="grid">'+(state.mode==='tasks'?taskTiles():homeTiles())+'</div>';
+  }
+  // Same collection, two shapes: noun-shaped topics or verb-shaped tasks.
+  function taskTiles(){
+    var ics=['spark','check','ai','signal','leaf','sprout'];
+    return (D.tasks||[]).map(function(t,i){
+      return '<button class="tile task" data-task="'+esc(t.id)+'">'
+        +'<span class="ico">'+icon(ics[i%ics.length],22)+'</span>'
+        +'<h3>'+esc(t.label)+'</h3>'
+        +'<p>'+esc(t.intro||'')+'</p>'
+        +'<span class="count">'+(t.steps||[]).length+'-step path</span>'
+      +'</button>';
+    }).join('');
+  }
+  function paintResults(){ var r=document.getElementById('results'); if(r) r.innerHTML=resultsBody(); }
+  function shortBlurb(b){ if(!b) return 'Resources and supports for this part of your teaching.'; b=b.replace(/^["']|["']$/g,''); return b.length>120?b.slice(0,117).replace(/[,.\s]+\S*$/,'')+'...':b; }
+  // The colour key teaches the provenance system: which colour means the info came
+  // from the resource itself, from the CTLS team, or from cited outside research.
+  function provKey(){
+    return '<div class="provkey"><span class="kt">Colour = where the info comes from</span>'
+      +'<span class="pair"><span class="prov res">From the resource</span> summarized from the PDF itself</span>'
+      +'<span class="pair"><span class="prov ctls">CTLS context</span> written by the CTLS team for RDP</span>'
+      +'<span class="pair"><span class="prov ext">Outside research</span> added from published research, source linked on every note</span>'
+    +'</div>';
+  }
+  // Verb-shaped entry: a teacher mid-planning thinks in tasks ("write outcomes"),
+  // not topics. The switcher flips the home grid between the two perspectives.
+  function taskChips(){
+    var ts = D.tasks||[]; if(!ts.length) return '';
+    return '<div class="taskrow"><div class="modetabs">'
+      +'<button class="modetab'+(state.mode==='topics'?' on':'')+'" data-mode="topics" aria-pressed="'+(state.mode==='topics')+'">Browse by topic</button>'
+      +'<button class="modetab'+(state.mode==='tasks'?' on':'')+'" data-mode="tasks" aria-pressed="'+(state.mode==='tasks')+'">I&#39;m trying to&hellip;</button>'
+    +'</div></div>';
+  }
+  function aiToggle(){return '<label class="aitoggle"><input type="checkbox" id="aichk"'+(state.ai?' checked':'')+'> Show where AI fits in each resource</label>';}
+  function indigToggle(){return '<label class="aitoggle"><input type="checkbox" id="indigchk"'+(state.indig?' checked':'')+'> Show where Indigenization fits in each resource</label>';}
+
+  function topicView(name){
+    var t = topicByName(name);
+    var live = topicResources(name);
+    var head = '<button class="back" data-home>'+icon('dot',12)+' All topics</button>'
+      +'<div class="topic-head"><div class="eyebrow">Topic</div><h2>'+esc(name)+'</h2>'
+      +'<p class="blurb">'+esc(t.blurb||'')+'</p></div>';
+    if(t.state!=='active'){
+      return head+(name==='Indigenizing my teaching'?indigPanel():devPanel(name));
+    }
+    var starts = (t.startHere||[]).map(function(title){
+      var rr = byTitle(title);
+      var pdf = (rr && rr.url) ? ' <a class="mini-pdf" href="'+esc(rr.url)+'" target="_blank" rel="noopener" aria-label="Open '+esc(title)+' as a PDF, in a new tab">PDF &#8599;</a>' : '';
+      return '<li><span><a href="#/res/'+slugify(title)+'" data-res="'+esc(title)+'">'+esc(title)+'</a>'+pdf+'</span></li>';
+    }).join('');
+    var startBlock = starts ? '<div class="starthere"><div class="k">Start here when you are short on time</div><ol>'+starts+'</ol></div>' : '';
+    var cards = live.map(resCard).join('');
+    return head+startBlock+provKey()+'<div style="margin-top:.9rem">'+cards+'</div>';
+  }
+
+  function taskById(id){var ts=D.tasks||[];for(var i=0;i<ts.length;i++){if(ts[i].id===id)return ts[i];}return null;}
+  // Task view: same skeleton as a topic (header, numbered path, cards), but the
+  // sequence comes from a task's steps and cards can span topics (topic chip shown).
+  function taskView(id){
+    var t = taskById(id);
+    if(!t) return teacherShell();
+    var head = '<button class="back" data-home>'+icon('dot',12)+' All topics</button>'
+      +'<div class="topic-head"><div class="eyebrow">I&#39;m trying to</div><h2>'+esc(t.label)+'</h2>'
+      +'<p class="blurb">'+esc(t.intro||'')+'</p></div>';
+    var steps = (t.steps||[]).map(function(st){
+      var rr = byTitle(st.res);
+      var pdf = (rr && rr.url) ? ' <a class="mini-pdf" href="'+esc(rr.url)+'" target="_blank" rel="noopener" aria-label="Open '+esc(st.res)+' as a PDF, in a new tab">PDF &#8599;</a>' : '';
+      var note = st.note ? ' <span class="stepnote">'+esc(st.note)+'</span>' : '';
+      return '<li><span><a href="#/res/'+slugify(st.res)+'" data-res="'+esc(st.res)+'">'+esc(st.res)+'</a>'+pdf+note+'</span></li>';
+    }).join('');
+    var startBlock = steps ? '<div class="starthere"><div class="k">The path, in order</div><ol>'+steps+'</ol></div>' : '';
+    var cards = (t.steps||[]).map(function(st){return byTitle(st.res);}).filter(Boolean).map(resCard).join('');
+    return head+startBlock+provKey()+'<div style="margin-top:.9rem">'+cards+'</div>';
+  }
+
+  function devPanel(name){
+    var msg = {
+      'Indigenizing my teaching':'This topic is being built with the Indigenizing Scholar and needs the right ownership and sign-off before anything is published. It will gather guidance for weaving Indigenous knowledge into content, delivery, and assessment, plus the micro-credential. Nothing here is placeholder filler, it is intentionally held until it can be done well.',
+      'AI (cross-cutting)':'AI is not a separate topic here. It runs through every topic. Turn on "Show where AI fits" on the home screen to see the AI angle inside each resource. RDP\'s anchor pieces: Module 0 (AI Workforce Readiness, linked below) is the literacy on-ramp in Brightspace, and the approved AI Statement & 8 Principles are available to employees on RDP Connect.'
+    }[name] || 'Content for this topic is in development.';
+    var extra='';
+    if(name==='AI (cross-cutting)'){
+      var lk=function(href,label){return '<a href="'+href+'" target="_blank" rel="noopener" style="display:inline-block;margin:.2rem 1.1rem .2rem 0;color:#7a5a2a;font-weight:600;text-decoration:underline">'+esc(label)+' ↗</a>';};
+      extra='<p style="margin:.55rem 0 0">'
+        +lk('https://rdp.brightspace.com/d2l/le/discovery/view/course/13481','Start Module 0 (AI Workforce Readiness)')
+        +'</p>';
+    }
+    var h3 = name==='AI (cross-cutting)' ? 'AI runs through every topic' : 'In development';
+    return '<div class="devpanel"><h3>'+h3+'</h3><p>'+esc(msg)+'</p>'+extra+'</div>';
+  }
+  // Indigenization is owner-gated: this is drawn from RDP's own published Indigenization
+  // page (their wording and links), not authored here, and stays flagged for sign-off.
+  function indigPanel(){
+    var src='https://rdpolytech.ca/about-us/services-departments/centre-teaching-learning-scholarship/indigenization';
+    function L(href,label,sub){ return '<li style="margin:.4rem 0"><a href="'+href+'" target="_blank" rel="noopener">'+esc(label)+'</a>'+(sub?' <span style="color:#5b6770;font-size:.88rem">'+esc(sub)+'</span>':'')+'</li>'; }
+    return ''
+    +'<div class="starthere"><div class="k">Ewicihitoyak (Cree): working together, developing relationships</div>'
+      +'<p style="margin:.2rem 0 .7rem;color:rgba(255,255,255,.92);font-size:.95rem">From RDP&#39;s published Indigenization page. RDP acknowledges that we learn and work on Treaty 7, Treaty 6 and M&eacute;tis ancestral lands, and advocates reconciliation through the integration of First Nations, Inuit and M&eacute;tis voices, perspectives and experiences.</p>'
+      +'<ul style="list-style:none;padding:0;margin:0">'
+        +L(src,'RDP Indigenization (the full page)')
+        +L('https://rdpolytech.ca/sites/default/files/2024-03/ReconciliAction_Booklet_digital.pdf','RDP Reconcili-Action Plan')
+        +L(src,'Indigenization: Foundations & Context course','for faculty and staff; can grant PLAR for ETaL Module 4')
+        +L('https://guides.rdpolytech.ca/indigenous/resources','RDP Library: Indigenous Resources guide','finding sources, TRC resources, language learning, pedagogy guides')
+        +L('https://ehprnh2mwo3.exactdn.com/wp-content/uploads/2021/01/Calls_to_Action_English2.pdf','Truth & Reconciliation Calls to Action')
+        +L('https://www.un.org/development/desa/indigenouspeoples/wp-content/uploads/sites/19/2018/11/UNDRIP_E_web.pdf','UN Declaration on the Rights of Indigenous Peoples (UNDRIP)')
+        +L('https://www.collegesinstitutes.ca/what-we-do/our-priorities/accelerating-reconciliation/indigenous-education-protocol/','Indigenous Education Protocol (Colleges and Institutes Canada)')
+      +'</ul>'
+    +'</div>'
+    +'<div class="devpanel"><h3>Owner-gated (led by the Indigenous Learning Designer)</h3><p>Drawn from RDP&#39;s own published Indigenization page and being built with the Indigenizing Scholar. The teaching-focused guidance (weaving Indigenous knowledge into content, delivery and assessment, plus the micro-credential) and any imagery need the Indigenous Learning Designer and dean to sign off before wider use. Note: the Foundations &amp; Context course dates on the live page still show Winter 2024 and need updating.</p></div>';
+  }
+
+  // Flag (do NOT reword) anything still written in a retired-LMS context, so it is
+  // visibly marked as pending a Brightspace rewrite. Detection is by keyword at render time.
+  function legacyLMS(s){ return /blackboard|collaborate ultra|safeassign/i.test(s||''); }
+  var UPDATE_CHIP = '<span class="chip update" title="References retired Blackboard or Collaborate Ultra tools. Pending rewrite for Brightspace.">Brightspace update</span>';
+  function resCard(r){
+    var meta = '<span class="chip read">'+icon('dot',11)+' '+esc(r.readTime||'?')+' min read</span>'
+      + (r.format?'<span class="chip fmt">'+esc(r.format)+'</span>':'')
+      + ((state.view==='search'||state.view==='task') && r.topic?'<span class="chip topic">'+esc(r.topic)+'</span>':'')
+      + statusChip(r)
+      + (legacyLMS(r.title+' '+(r.oneLine||'')+' '+(r.concepts||[]).join(' ')+' '+(r.poly||''))?UPDATE_CHIP:'');
+    var rel = (r.related||[]).filter(byTitle).map(function(t){return '<button class="reltag" data-res="'+esc(t)+'">'+esc(t)+'</button>';}).join('');
+    var hasAi = r.ai && r.ai!=='-' && r.ai!=='—';
+    // Cross-cutting lenses render at card-body level (not inside .more), gated on their
+    // own toggle, so switching a lens on visibly reveals the row on every card.
+    var lensRows = ''
+      + (state.ai && hasAi?'<div class="infoblock ctls"><div class="blab">Where AI fits <span class="prov ctls">CTLS context</span></div><p>'+esc(r.ai)+'</p></div>':'')
+      + (state.indig?'<div class="infoblock gated"><div class="blab">Where Indigenization fits <span class="prov ctls">CTLS context</span></div><p>Consider whose knowledge this resource centres and how Indigenous perspectives and ways of knowing could be woven in. The Indigenous Learning Designer can help. <i>(Owner-gated, in development.)</i></p></div>':'');
+    var openLink = r.url ? '<div class="openrow"><a class="openres" href="'+esc(r.url)+'" target="_blank" rel="noopener"'+(r.status==='refreshing'?' title="Original version - a refreshed edition is on the way"':'')+'>Open the resource (PDF) &#8599;</a></div>' : '';
+    // Situational scent, visible without expanding (CTLS-written, hence the green label).
+    var when = (r.useWhen&&r.useWhen.length)?'<p class="usewhen"><span class="uw">Use this when</span>'+r.useWhen.map(esc).join(' &middot; ')+'</p>':'';
+    // Page anchors: a mini table of contents INTO the PDF (#page=N works because the
+    // rdpolytech media URLs serve inline). Only multi-page PDFs carry anchors.
+    var jumps = (r.url&&r.anchors&&r.anchors.length)?'<div class="jumps"><span class="jlab">Jump to:</span>'
+      +r.anchors.map(function(a){return '<a href="'+esc(r.url)+'#page='+(+a.page||1)+'" target="_blank" rel="noopener">'+esc(a.label)+' (p. '+esc(a.page)+') &#8599;</a>';}).join('')+'</div>':'';
+    var inside = (r.concepts&&r.concepts.length)?'<div class="infoblock inside"><div class="blab">What&#39;s inside <span class="prov res">From the resource</span></div><ul>'
+      +r.concepts.map(function(c){return '<li>'+esc(c)+'</li>';}).join('')+'</ul></div>':'';
+    // Research notes carry their citation on every line - nothing renders without a source.
+    var research = (r.research&&r.research.length)?'<div class="infoblock research"><div class="blab">From the research <span class="prov ext">Outside research</span></div><ul>'
+      +r.research.map(function(f){return '<li>'+esc(f.fact)+' <a class="cite" href="'+esc(f.url)+'" target="_blank" rel="noopener">'+esc(f.source)+' &#8599;</a></li>';}).join('')+'</ul></div>':'';
+    var inner = inside
+      + (r.poly?'<div class="infoblock ctls"><div class="blab">Polytechnic angle <span class="prov ctls">CTLS context</span></div><p>'+esc(r.poly)+'</p></div>':'')
+      + research
+      + (rel?'<div style="margin-top:.6rem"><span class="lab" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:#5b6770">Related</span><div class="rel">'+rel+'</div></div>':'');
+    var moreBlock = inner ? '<button class="expand" data-expand>Details &amp; related</button><div class="more">'+inner+'</div>' : '';
+    return '<article class="rescard" data-card="'+esc(r.title)+'"><div class="body">'
+      +((state.edit&&!state.editCtx)?'<button class="cardpencil" type="button" data-edit-card="'+esc(r.title)+'" aria-label="Edit '+esc(r.title)+'">&#9998; Edit</button>':'')
+      +'<h4>'+esc(r.title)+'</h4>'
+      +'<div class="meta">'+meta+'</div>'
+      +'<p class="one" style="margin-top:.5rem">'+esc(r.oneLine)+'</p>'
+      +when
+      +openLink
+      +jumps
+      +lensRows
+      +moreBlock
+      +'</div></article>';
+  }
+
+  function searchBody(q){
+    var ql=q.toLowerCase();
+    var rs=D.resources.filter(function(r){return (
+      r.title.toLowerCase().indexOf(ql)>=0 || (r.oneLine||'').toLowerCase().indexOf(ql)>=0 ||
+      (r.concepts||[]).join(' ').toLowerCase().indexOf(ql)>=0 || (r.topic||'').toLowerCase().indexOf(ql)>=0 ||
+      (r.useWhen||[]).join(' ').toLowerCase().indexOf(ql)>=0 ||
+      (r.research||[]).map(function(f){return f.fact+' '+f.source;}).join(' ').toLowerCase().indexOf(ql)>=0);});
+    var gs=D.glossary.filter(function(g){return g.term.toLowerCase().indexOf(ql)>=0 || (g.def||'').toLowerCase().indexOf(ql)>=0;});
+    live.textContent = rs.length+' resources and '+gs.length+' terms match '+q;
+    var out='<div class="topic-head"><div class="eyebrow">Search</div><h2>'+esc(rs.length)+' resource'+(rs.length===1?'':'s')+' and '+esc(gs.length)+' term'+(gs.length===1?'':'s')+' for "'+esc(q)+'"</h2></div>';
+    if(rs.length) out+= rs.map(resCard).join('');
+    if(gs.length){ out+='<div class="secthead">Matching glossary terms'+(gs.length>12?' (showing 12 of '+gs.length+')':'')+'</div>'+gs.slice(0,12).map(glossItem).join(''); }
+    if(!rs.length && !gs.length) out+='<div class="devpanel"><h3>Nothing yet</h3><p>No resource or term matched that. Try a simpler word, like "assessment", "online", or "feedback".</p></div>';
+    return out;
+  }
+
+  function glossItem(g){
+    var src = (g.sources||[]).length ? '<div class="src">Used in: '+esc(g.sources.slice(0,4).join(', '))+'</div>' : '';
+    var upd = legacyLMS(g.term+' '+(g.def||'')) ? ' '+UPDATE_CHIP : '';
+    return '<div class="gloss-item"><b>'+esc(g.term)+'</b>'+upd+' '+esc(g.def)+src+'</div>';
+  }
+
+  /* ======================================================================
+     Phase 0 inline editor. Local-only: edits mutate the in-memory D and can
+     be downloaded as ctls-data.json. Nothing is saved back yet (that is
+     Phase 1: the same form opens a GitHub PR). Fields are grouped by the
+     purple/green/teal provenance layers so the shape is legible to a
+     non-technical editor.
+     ====================================================================== */
+  var STATUS_OPTS=[{v:'',t:'Active (no chip)'},{v:'refreshing',t:'Being refreshed'},{v:'moved',t:'Now in the Library'}];
+  function nonEmpty(v){return String(v==null?'':v).trim()!=='';}
+  function blankRes(){ return {title:'',topic:(D.topics[0]&&D.topics[0].name)||'',oneLine:'',url:'',readTime:'',format:'',status:'',concepts:[],anchors:[],useWhen:[],poly:'',ai:'',related:[],research:[]}; }
+  function cloneRes(r){ return {
+    title:r.title||'', topic:r.topic||'', oneLine:r.oneLine||'', url:r.url||'',
+    readTime:(r.readTime==null?'':r.readTime), format:r.format||'', status:r.status||'',
+    concepts:(r.concepts||[]).slice(), anchors:(r.anchors||[]).map(function(a){return {label:a.label||'',page:(a.page==null?'':a.page)};}),
+    useWhen:(r.useWhen||[]).slice(), poly:r.poly||'', ai:r.ai||'', related:(r.related||[]).slice(),
+    research:(r.research||[]).map(function(f){return {fact:f.fact||'',source:f.source||'',url:f.url||''};})
+  }; }
+  function startEdit(orig){ var r=orig?byTitle(orig):null; var draft=r?cloneRes(r):blankRes();
+    // base = the normalized starting point, so we can tell a dirty draft from an untouched one
+    state.editCtx={orig:orig||null, draft:draft, base:JSON.stringify(normalizeForStore(draft)), hash:location.hash}; render(); }
+  function currentForm(){ return document.getElementById('editform'); }
+  function syncDraftFromForm(){ var f=currentForm(); if(f&&state.editCtx){ state.editCtx.draft=readDraft(f); } }
+  function draftDirty(){ if(!state.editCtx) return false; syncDraftFromForm();
+    return JSON.stringify(normalizeForStore(state.editCtx.draft))!==state.editCtx.base; }
+  function confirmDiscard(){ return !draftDirty() || confirm('Discard your unsaved edits to this card?'); }
+
+  // ---- field builders ----
+  function fInput(f,label,val,o){ o=o||{}; return '<div class="field'+(o.req?' req':'')+'"><label for="ef-'+f+'">'+esc(label)+(o.help?' <span class="help">'+esc(o.help)+'</span>':'')+'</label>'
+    +'<input id="ef-'+f+'" type="'+(o.type||'text')+'" data-field="'+f+'" value="'+esc(val==null?'':val)+'"'+(o.req?' aria-required="true"':'')+(o.attr||'')+'></div>'; }
+  function fTextarea(f,label,val,o){ o=o||{}; return '<div class="field'+(o.req?' req':'')+'"><label for="ef-'+f+'">'+esc(label)+(o.help?' <span class="help">'+esc(o.help)+'</span>':'')+'</label>'
+    +'<textarea id="ef-'+f+'" data-field="'+f+'"'+(o.req?' aria-required="true"':'')+'>'+esc(val||'')+'</textarea></div>'; }
+  function fSelect(f,label,val,options){ var o=options.map(function(op){return '<option value="'+esc(op.v)+'"'+(op.v===(val||'')?' selected':'')+'>'+esc(op.t)+'</option>';}).join('');
+    return '<div class="field"><label for="ef-'+f+'">'+esc(label)+'</label><select id="ef-'+f+'" data-field="'+f+'">'+o+'</select></div>'; }
+  function fSimpleList(name,label,help,vals){ var rows=(vals&&vals.length?vals:['']).map(function(v){return '<div class="listrow" data-row><input type="text" data-cell="v" aria-label="'+esc(label)+'" value="'+esc(v||'')+'"><button class="delrow" type="button" data-delrow aria-label="Remove this line">&times;</button></div>';}).join('');
+    return '<div class="field"><label>'+esc(label)+(help?' <span class="help">'+esc(help)+'</span>':'')+'</label><div data-list="'+name+'">'+rows+'</div><button class="addrow" type="button" data-addrow="'+name+'">+ Add</button></div>'; }
+  function anchorRow(a){ a=a||{}; return '<div class="listrow" data-row><input type="text" data-cell="label" aria-label="Jump link label" placeholder="Label (e.g. The rubric grid)" value="'+esc(a.label||'')+'"><input type="number" min="1" class="pagecell" data-cell="page" aria-label="Page number" placeholder="Page" value="'+esc(a.page==null?'':a.page)+'"><button class="delrow" type="button" data-delrow aria-label="Remove this jump link">&times;</button></div>'; }
+  function fAnchors(vals){ var rows=(vals&&vals.length?vals:[]).map(anchorRow).join('');
+    return '<div class="field"><label>Jump-to page links <span class="help">a label + the page it starts on, a mini table of contents into the PDF</span></label><div data-list="anchors">'+rows+'</div><button class="addrow" type="button" data-addrow="anchors">+ Add a jump link</button></div>'; }
+  function researchNote(f,i){ f=f||{}; return '<div class="notecard" data-row>'
+    +'<div class="nhead"><span class="nlab">Note '+(i+1)+'</span><button class="delnote" type="button" data-delrow>&times; Remove note</button></div>'
+    +'<input type="text" data-cell="fact" aria-label="The fact or finding" placeholder="The fact or finding" value="'+esc(f.fact||'')+'">'
+    +'<div class="nrow"><input type="text" data-cell="source" aria-label="Source name" placeholder="Source name" value="'+esc(f.source||'')+'">'
+    +'<input type="url" data-cell="url" aria-label="Citation link, starts with https://" placeholder="https:// citation link" value="'+esc(f.url||'')+'"></div></div>'; }
+  function fResearch(vals){ var rows=(vals&&vals.length?vals:[]).map(researchNote).join('');
+    return '<div class="field"><label>Research notes <span class="help">every fact must carry a citation URL, that is the rule</span></label><div data-list="research">'+rows+'</div><button class="addrow" type="button" data-addrow="research">+ Add a research note</button></div>'; }
+  function fRelated(current){ var cur={}; (current||[]).forEach(function(t){cur[t]=1;}); var orig=state.editCtx&&state.editCtx.orig;
+    var boxes=D.resources.filter(function(r){return r.title!==orig;}).map(function(r){ return '<label><input type="checkbox" data-relcheck value="'+esc(r.title)+'"'+(cur[r.title]?' checked':'')+'> '+esc(r.title)+'</label>'; }).join('');
+    return '<div class="field"><label>Related resources <span class="help">tick the ones a reader should see next</span></label><div class="relgrid" data-list="related">'+(boxes||'<span class="help">No other resources yet.</span>')+'</div></div>'; }
+
+  // ---- read the whole draft back out of the DOM (rows kept unfiltered so add/remove stays index-stable) ----
+  function readDraft(form){
+    function g(f){ var el=form.querySelector('[data-field="'+f+'"]'); return el?el.value:''; }
+    function simple(name){ return [].map.call(form.querySelectorAll('[data-list="'+name+'"] [data-row]'),function(row){ var i=row.querySelector('[data-cell="v"]'); return i?i.value:''; }); }
+    var anchors=[].map.call(form.querySelectorAll('[data-list="anchors"] [data-row]'),function(row){ var l=row.querySelector('[data-cell="label"]'),p=row.querySelector('[data-cell="page"]'); return {label:l?l.value:'',page:p?p.value:''}; });
+    var research=[].map.call(form.querySelectorAll('[data-list="research"] [data-row]'),function(row){ function c(k){var el=row.querySelector('[data-cell="'+k+'"]');return el?el.value:'';} return {fact:c('fact'),source:c('source'),url:c('url')}; });
+    var related=[].map.call(form.querySelectorAll('[data-relcheck]:checked'),function(c){return c.value;});
+    return {title:g('title'),topic:g('topic'),oneLine:g('oneLine'),url:g('url'),readTime:g('readTime'),format:g('format'),status:g('status'),
+      concepts:simple('concepts'),anchors:anchors,useWhen:simple('useWhen'),poly:g('poly'),ai:g('ai'),related:related,research:research}; }
+
+  // ---- normalize a draft into the stored/rendered resource shape (drops empties, coerces numbers) ----
+  function normalizeForStore(d){
+    var out={title:(d.title||'').trim(),topic:d.topic||'',oneLine:(d.oneLine||'').trim(),url:(d.url||'').trim()};
+    if(nonEmpty(d.readTime)){ var n=parseInt(d.readTime,10); out.readTime=isNaN(n)?String(d.readTime).trim():n; }
+    if(nonEmpty(d.format)) out.format=d.format.trim();
+    if(nonEmpty(d.status)) out.status=d.status;
+    var cs=(d.concepts||[]).map(function(v){return String(v).trim();}).filter(nonEmpty); if(cs.length) out.concepts=cs;
+    var an=(d.anchors||[]).filter(function(a){return nonEmpty(a.label)||nonEmpty(a.page);}).map(function(a){var p=parseInt(a.page,10);return {label:String(a.label).trim(),page:isNaN(p)?a.page:p};}); if(an.length) out.anchors=an;
+    var uw=(d.useWhen||[]).map(function(v){return String(v).trim();}).filter(nonEmpty); if(uw.length) out.useWhen=uw;
+    if(nonEmpty(d.poly)) out.poly=d.poly.trim();
+    if(nonEmpty(d.ai)) out.ai=d.ai.trim();
+    if((d.related||[]).length) out.related=d.related.slice();
+    var rs=(d.research||[]).filter(function(f){return nonEmpty(f.fact)||nonEmpty(f.source)||nonEmpty(f.url);}).map(function(f){return {fact:String(f.fact).trim(),source:String(f.source).trim(),url:String(f.url).trim()};}); if(rs.length) out.research=rs;
+    return out; }
+
+  // ---- validation (each error carries the field it belongs to, when it has one) ----
+  function validate(d){
+    var e=[]; var orig=state.editCtx&&state.editCtx.orig;
+    function E(m,f){ e.push({m:m,f:f||null}); }
+    if(!nonEmpty(d.title)) E('Title is required.','title');
+    if(!nonEmpty(d.topic)) E('Choose a topic.','topic');
+    if(!nonEmpty(d.oneLine)) E('A one-line summary is required.','oneLine');
+    if(!nonEmpty(d.url)) E('The PDF link (URL) is required.','url');
+    else if(!/^https?:\/\//i.test(d.url.trim())) E('The PDF link must start with http:// or https://','url');
+    if(nonEmpty(d.title)){
+      var clash=D.resources.filter(function(r){return r.title===d.title.trim() && r.title!==orig;});
+      if(clash.length) E('Another resource already has that title.','title');
+      else{ var sl=slugify(d.title); var near=D.resources.filter(function(r){return r.title!==orig && slugify(r.title)===sl;});
+        if(near.length) E('That title is too close to "'+near[0].title+'" (they would share the same web address). Make it more distinct.','title'); }
+    }
+    (d.anchors||[]).forEach(function(a){ if(nonEmpty(a.label) && !(parseInt(a.page,10)>=1)) E('Jump link "'+a.label.trim()+'" needs a page number of 1 or more.'); });
+    (d.research||[]).forEach(function(f,i){ if(nonEmpty(f.fact)||nonEmpty(f.source)||nonEmpty(f.url)){
+      if(!nonEmpty(f.fact)) E('Research note '+(i+1)+' needs the fact text.');
+      if(!nonEmpty(f.url)) E('Research note '+(i+1)+' needs a citation URL (no uncited research).');
+      else if(!/^https?:\/\//i.test(f.url.trim())) E('Research note '+(i+1)+' citation URL must start with http:// or https://'); } });
+    return e; }
+  function errBlock(errs){ return errs.length?'<div class="editerrs"><b>Fix these before saving:</b><ul>'+errs.map(function(er){return '<li>'+esc(er.m)+'</li>';}).join('')+'</ul></div>':''; }
+  function miniErrs(errs){ if(!errs.length) return '';
+    return (errs.length===1?'1 thing to fix':errs.length+' things to fix')+' &middot; <button class="errjump" type="button" data-errjump>see the list</button>'; }
+  // Inline messages under the four keyed fields; adds/removes only the small .ferr
+  // divs, so the inputs themselves are never rebuilt while typing.
+  function paintFieldErrs(errs){
+    ['title','topic','oneLine','url'].forEach(function(f){
+      var el=document.getElementById('ef-'+f); if(!el) return;
+      var fld=el.closest('.field'); if(!fld) return;
+      var old=fld.querySelector('.ferr'); if(old) old.parentNode.removeChild(old);
+      var mine=errs.filter(function(er){return er.f===f;});
+      fld.classList.toggle('haserr', !!mine.length);
+      if(mine.length){ var dv=document.createElement('div'); dv.className='ferr'; dv.id='ef-'+f+'-err'; dv.textContent=mine[0].m;
+        fld.appendChild(dv); el.setAttribute('aria-describedby','ef-'+f+'-err'); }
+      else el.removeAttribute('aria-describedby');
+    }); }
+
+  // ---- the form view (takes over the main column while editing) ----
+  // At wide viewports the preview docks sticky in a right column so it stays
+  // visible while typing anywhere in the form; on narrow screens it sits on top.
+  function editFormView(){
+    var d=state.editCtx.draft, orig=state.editCtx.orig, errs=validate(d);
+    return '<button class="back" type="button" data-cancel-edit>'+icon('dot',12)+' Cancel</button>'
+     +'<div class="fhead"><div class="eyebrow">'+(orig?'Editing a resource':'New resource')+'</div><h2>'+esc(orig||'New resource')+'</h2>'
+       +'<p class="fhint">Fields are grouped by where the information comes from, the same colours as the cards. Starred fields are required.</p></div>'
+     +'<div class="editcols">'
+     +'<div class="editprev"><div class="pvlab">Live preview (how the card will look)</div><div id="editprev-body">'+resCard(normalizeForStore(d))+'</div></div>'
+     +'<form class="editform" id="editform" onsubmit="return false">'
+     +'<div id="editerrs">'+errBlock(errs)+'</div>'
+     +'<div class="efgroup identity"><div class="gt">The basics</div>'+fInput('title','Title',d.title,{req:true})+fSelect('topic','Topic',d.topic,D.topics.map(function(t){return {v:t.name,t:t.name};}))+'</div>'
+     +'<div class="efgroup res"><div class="gt">From the resource <span class="prov res">purple</span></div><p class="gsub">Summarized from the PDF itself.</p>'
+       +fTextarea('oneLine','One-line summary',d.oneLine,{req:true,help:'the sentence under the title'})
+       +fInput('url','PDF link (URL)',d.url,{req:true,type:'url',help:'starts with https://'})
+       +fInput('readTime','Read time (minutes)',d.readTime,{type:'number',attr:' min="1"'})
+       +fInput('format','Format',d.format,{help:'e.g. Guide, Checklist, Worksheet'})
+       +fSelect('status','Status chip',d.status,STATUS_OPTS)
+       +fSimpleList('concepts','Key points ("What’s inside")','the main points, one per line',d.concepts)
+       +fAnchors(d.anchors)+'</div>'
+     +'<div class="efgroup ctls"><div class="gt">CTLS context <span class="prov ctls">green</span></div><p class="gsub">Written by the CTLS team for RDP.</p>'
+       +fSimpleList('useWhen','"Use this when..." moments','the situations a teacher reaches for this',d.useWhen)
+       +fTextarea('poly','Polytechnic angle',d.poly)
+       +fTextarea('ai','Where AI fits',d.ai,{help:'shown when a reader turns the AI lens on'})
+       +fRelated(d.related)+'</div>'
+     +'<div class="efgroup ext"><div class="gt">Outside research <span class="prov ext">teal</span></div><p class="gsub">Published research. Every fact carries its citation.</p>'
+       +fResearch(d.research)+'</div>'
+     +'<div class="editactions">'
+       +'<button class="ebtn primary" type="button" data-apply-edit>'+(orig?'Apply changes':'Add resource')+'</button>'
+       +'<button class="ebtn ghost" type="button" data-cancel-edit>Cancel</button>'
+       +'<span class="errline" id="editerrs-mini">'+miniErrs(errs)+'</span>'
+       +'<span class="note">Applying updates this page only; nothing goes public until it is saved to the shared Finder Data folder.</span>'
+     +'</div></form></div>'; }
+
+  // Publishing has two tiers. Direct save (below) writes straight into the
+  // OneDrive-synced Finder Data folder for whoever has set it up once.
+  // Everyone else -- and direct save itself, if it ever fails -- falls back
+  // to Publish: download the file and open the Finder Data SharePoint library
+  // in the same click, so the next step (Upload > Files, Replace) is right
+  // there. The actual write happens inside that already-authenticated
+  // SharePoint tab, so nothing about identity needs to travel from this page.
+  var PUBLISH_URL='https://rdcca.sharepoint.com/sites/ctl-resources/Finder%20Data/Forms/AllItems.aspx';
+  // Publish UI is parked while direct save is under test (2026-07-10). All the
+  // machinery (publishData, PUBLISH_URL, the data-publish handler) stays wired;
+  // flip this to true to bring the buttons back. Browsers without the File
+  // System Access API (Safari/Firefox) still get Publish regardless, since
+  // direct save cannot exist there and Publish is their only path.
+  var PUBLISH_UI=false;
+  function pubOK(){ return PUBLISH_UI || !FS_OK; }
+  function editBar(){
+    var verb = (FS_OK&&saveHandle)||!pubOK() ? 'saved' : 'published';
+    var pb = pending>0 ? '<span class="pendbadge">'+pending+' change'+(pending===1?'':'s')+' not yet '+verb+'</span>' : '';
+    if(FS_OK&&saveHandle){
+      return '<div class="editbar"><p><b>Edit mode.</b> Click <b>&#9998; Edit</b> on any card to change it. Applying a change saves it to the shared Finder Data folder, and the site republishes itself (live in a minute or two).</p>'
+       +'<div class="ebrow"><button class="ebtn ghost" type="button" data-add-res>+ Add a resource</button>'
+       +'<button class="ebtn '+(pending>0?'primary':'ghost')+'" type="button" data-save-folder>Save to the shared folder</button>'
+       +(pubOK()?'<button class="ebtn ghost" type="button" data-publish>Publish instead (backup)</button>':'')
+       +'<button class="ebtn ghost" type="button" data-setup-save>Change save location</button>'+pb+'</div></div>'; }
+    if(pubOK())
+      return '<div class="editbar"><p><b>Edit mode.</b> Click <b>&#9998; Edit</b> on any card to change it. When you are ready, click <b>Publish</b> &mdash; it downloads your changes and opens the Finder Data library so you can upload the file there.</p>'
+       +'<div class="ebrow"><button class="ebtn ghost" type="button" data-add-res>+ Add a resource</button>'
+       +'<button class="ebtn '+(pending>0?'primary':'ghost')+'" type="button" data-publish>Publish</button>'
+       +(FS_OK?'<button class="ebtn ghost" type="button" data-setup-save>Set up direct save (one time)</button>':'')
+       +pb+'</div></div>';
+    return '<div class="editbar"><p><b>Edit mode.</b> Click <b>&#9998; Edit</b> on any card to change it. Publishing takes a one-time setup: click <b>Set up direct save</b> and select the existing ctls-data.json in your synced Finder Data folder.</p>'
+     +'<div class="ebrow"><button class="ebtn ghost" type="button" data-add-res>+ Add a resource</button>'
+     +'<button class="ebtn '+(pending>0?'primary':'ghost')+'" type="button" data-setup-save>Set up direct save (one time)</button>'
+     +pb+'</div></div>'; }
+  // Post-apply banner. With direct save wired it reports the auto-save result;
+  // otherwise it is the visible "step 2" nudge with the Publish button right there.
+  function savedBar(){
+    if(!state.saved) return '';
+    var head = state.saved.title ? '<b>&#10003; "'+esc(state.saved.title)+'" '+state.saved.action+'.</b> ' : '<b>&#10003; Saved.</b> ';
+    if(state.saved.sync==='trying')
+      return '<div class="savedbar" role="status"><p class="msg">'+head+'Saving to the shared folder&hellip;</p></div>';
+    if(state.saved.sync==='ok')
+      return '<div class="savedbar" role="status"><p class="msg">'+head+'Saved to the shared Finder Data folder. Publishing runs on its own; the live site updates in a minute or two. Nothing else to do.</p>'
+       +'<button class="ebtn ghost" type="button" data-dismiss-saved>Dismiss</button></div>';
+    if(state.saved.sync==='fail')
+      return '<div class="savedbar" role="status"><p class="msg">'+head+'It could not be saved to the shared folder automatically. Try again, or click Change save location if it is pointing at the wrong place.'+(pubOK()?' Or click Publish to download and upload it yourself.':'')+'</p>'
+       +'<button class="ebtn primary" type="button" data-save-folder>Save to the shared folder</button>'
+       +'<button class="ebtn ghost" type="button" data-setup-save>Change save location</button>'
+       +(pubOK()?'<button class="ebtn ghost" type="button" data-publish>Publish</button>':'')
+       +'<button class="ebtn ghost" type="button" data-dismiss-saved>Dismiss</button></div>';
+    if(pubOK())
+      return '<div class="savedbar" role="status"><p class="msg">'+head+'Step 2: click Publish to send this live. You can keep editing other cards first; one Publish carries all your changes.</p>'
+       +'<button class="ebtn primary" type="button" data-publish>Publish</button>'
+       +(FS_OK?'<button class="ebtn ghost" type="button" data-setup-save>Set up direct save (skips this step)</button>':'')
+       +'<button class="ebtn ghost" type="button" data-dismiss-saved>Dismiss</button></div>';
+    return '<div class="savedbar" role="status"><p class="msg">'+head+'Step 2: set up direct save to send this live &mdash; one-time setup, and it carries all the changes you have applied.</p>'
+     +'<button class="ebtn primary" type="button" data-setup-save>Set up direct save (one time)</button>'
+     +'<button class="ebtn ghost" type="button" data-dismiss-saved>Dismiss</button></div>'; }
+  // Offer to bring back changes that were applied in an earlier visit but never downloaded.
+  function restoreBar(){
+    if(!state.restore) return '';
+    var when=''; try{ if(state.restore.when){ when=' on '+new Date(state.restore.when).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}); } }catch(e){}
+    return '<div class="restorebar" role="status"><p class="msg"><b>Unfinished changes found.</b> You made '+state.restore.n+' change'+(state.restore.n===1?'':'s')+' here'+when+' that '+(state.restore.n===1?'was':'were')+' never downloaded. Bring '+(state.restore.n===1?'it':'them')+' back?</p>'
+     +'<button class="ebtn primary" type="button" data-restore>Restore</button>'
+     +'<button class="ebtn ghost" type="button" data-discard-restore>Discard them</button></div>'; }
+
+  // Row ops re-render the form but hold the scroll position and move focus
+  // somewhere sensible, so working at the bottom of the form never jumps to the top.
+  function addRow(name){ syncDraftFromForm(); var d=state.editCtx.draft;
+    if(name==='anchors') d.anchors.push({label:'',page:''}); else if(name==='research') d.research.push({fact:'',source:'',url:''}); else d[name].push('');
+    render({keepScroll:true}); var rows=document.querySelectorAll('[data-list="'+name+'"] [data-row]');
+    if(rows.length){ var inp=rows[rows.length-1].querySelector('input'); if(inp) inp.focus(); }
+    if(live) live.textContent='Row added.'; }
+  function delRow(btn){ var listEl=btn.closest('[data-list]'); if(!listEl) return; var name=listEl.getAttribute('data-list');
+    var idx=[].indexOf.call(listEl.querySelectorAll('[data-row]'), btn.closest('[data-row]')); syncDraftFromForm();
+    if(state.editCtx.draft[name] && idx>-1) state.editCtx.draft[name].splice(idx,1);
+    var y=window.scrollY; render({keepScroll:true}); window.scrollTo(0,y);
+    var rows=document.querySelectorAll('[data-list="'+name+'"] [data-row]');
+    var next=rows.length?rows[Math.min(idx,rows.length-1)].querySelector('input'):document.querySelector('[data-addrow="'+name+'"]');
+    if(next) next.focus({preventScroll:true});
+    if(live) live.textContent='Row removed.'; }
+  // The form only manages the fields it shows. Any other field on the stored
+  // resource (e.g. audience) must ride through an edit untouched, not be
+  // silently dropped because the form never knew about it.
+  var FORM_KEYS=['title','topic','oneLine','url','readTime','format','status','concepts','anchors','useWhen','poly','ai','related','research'];
+  function mergePreserving(old, out){
+    var merged={}, k;
+    for(k in old){ if(Object.prototype.hasOwnProperty.call(old,k) && FORM_KEYS.indexOf(k)<0) merged[k]=old[k]; }
+    for(k in out){ if(Object.prototype.hasOwnProperty.call(out,k)) merged[k]=out[k]; }
+    return merged; }
+  // A renamed title is a key: rewrite every reference to it so related links,
+  // start-here lists, task steps and the concept map never dangle (finding K).
+  function renameRefs(oldT,newT){
+    D.resources.forEach(function(r){ if(r.related){ r.related=r.related.map(function(t){return t===oldT?newT:t;}); } });
+    (D.edges||[]).forEach(function(ed){ if(ed.from===oldT) ed.from=newT; if(ed.to===oldT) ed.to=newT; });
+    (D.tasks||[]).forEach(function(t){ (t.steps||[]).forEach(function(s){ if(s.res===oldT) s.res=newT; }); });
+    (D.topics||[]).forEach(function(t){ if(t.startHere){ t.startHere=t.startHere.map(function(x){return x===oldT?newT:x;}); } }); }
+  function applyEdit(){ syncDraftFromForm(); var d=state.editCtx.draft, errs=validate(d);
+    if(errs.length){ var box=document.getElementById('editerrs'); if(box){ box.innerHTML=errBlock(errs); box.scrollIntoView({behavior:'smooth',block:'center'}); }
+      var mini=document.getElementById('editerrs-mini'); if(mini) mini.innerHTML=miniErrs(errs);
+      paintFieldErrs(errs); return; }
+    var store=normalizeForStore(d), orig=state.editCtx.orig, done=false;
+    if(orig){ for(var i=0;i<D.resources.length;i++){ if(D.resources[i].title===orig){ D.resources[i]=mergePreserving(D.resources[i], store); done=true; break; } }
+      if(done && store.title!==orig) renameRefs(orig, store.title); }
+    if(!done) D.resources.push(store);
+    pending++; savePendingLocal();
+    var direct = FS_OK && !!saveHandle;
+    state.saved={title:store.title, action:orig?'updated':'added', sync:direct?'trying':null};
+    state.editCtx=null; state.view='topic'; state.topic=store.topic; state.q='';
+    var tp=topicByName(store.topic); if(history.replaceState) history.replaceState(null,'', tp&&tp.id?'#/topic/'+tp.id:'#/');
+    render(); reveal(store.title);
+    if(direct){ saveToFolder(); }
+    else if(live) live.textContent=(orig?'Updated "':'Added "')+store.title+'". '+(pubOK()?'Click Publish when ready.':'Set up direct save to send it live.'); }
+  // _meta is automation-owned: rev counts published versions. Saves carry it
+  // through and record baseRev = the rev this page loaded, so the merge bot can
+  // three-way merge concurrent editors instead of last-write-wins.
+  function payloadJSON(){ var payload={}; ['meta','topics','resources','tasks','glossary','edges'].forEach(function(k){ if(D[k]!=null) payload[k]=D[k]; });
+    if(D._meta && typeof D._meta==='object'){ var pm={}, mk; for(mk in D._meta){ if(Object.prototype.hasOwnProperty.call(D._meta,mk)) pm[mk]=D._meta[mk]; } if(pm.rev!=null) pm.baseRev=pm.rev; payload._meta=pm; }
+    return payload; }
+  function publishData(){
+    var blob=new Blob([JSON.stringify(payloadJSON(),null,1)+'\n'],{type:'application/json'}); var url=URL.createObjectURL(blob);
+    var a=document.createElement('a'); a.href=url; a.download='ctls-data.json'; document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(url); a.parentNode&&a.parentNode.removeChild(a); },120);
+    window.open(PUBLISH_URL,'_blank','noopener');
+    state.saved=null; clearPendingLocal(); render({keepScroll:true});
+    if(live) live.textContent='Downloaded ctls-data.json and opened the Finder Data library in a new tab. Upload the file there (Upload > Files, choose Replace) to publish.'; }
+  // Applied-but-not-downloaded changes are mirrored to localStorage so a closed
+  // tab or crash can offer them back on the next edit visit (finding B).
+  var pending=0, LS_KEY='rf-unsent-changes';
+  function savePendingLocal(){ try{ localStorage.setItem(LS_KEY, JSON.stringify({when:new Date().toISOString(), n:pending, data:payloadJSON()})); }catch(e){} }
+  function clearPendingLocal(){ pending=0; try{ localStorage.removeItem(LS_KEY); }catch(e){} }
+  function checkRestore(){ if(!state.edit || pending>0) return;
+    try{ var raw=localStorage.getItem(LS_KEY); if(!raw) return; var st=JSON.parse(raw);
+      if(st && st.n>0 && st.data) state.restore=st; }catch(e){} }
+
+  /* ---- direct save into the OneDrive-synced "Finder Data" folder ----
+     The SharePoint library is the publish gate: its permissions decide who may
+     publish, OneDrive syncs the written file up, and the Power Automate flow
+     ("Finder JSON -> GitHub") commits it. The page itself holds no token and
+     no endpoint; the write happens through the OS as the signed-in editor.
+     File System Access API (Chromium: Edge/Chrome). One picker grant per
+     editor; the file handle is remembered in IndexedDB. Everyone else keeps
+     the Publish (download + upload) path, which is also the fallback when
+     direct save fails for any reason. */
+  var FS_OK = typeof window.showSaveFilePicker==='function';
+  var saveHandle=null, knownRaws=[];
+  function idbOpen(){ return new Promise(function(res,rej){ var r=indexedDB.open('rf-editor',1);
+    r.onupgradeneeded=function(){ r.result.createObjectStore('kv'); };
+    r.onsuccess=function(){ res(r.result); }; r.onerror=function(){ rej(r.error); }; }); }
+  function idbSet(k,v){ return idbOpen().then(function(db){ return new Promise(function(res,rej){
+    var tx=db.transaction('kv','readwrite'); tx.objectStore('kv').put(v,k);
+    tx.oncomplete=res; tx.onerror=function(){ rej(tx.error); }; }); }); }
+  function idbGet(k){ return idbOpen().then(function(db){ return new Promise(function(res,rej){
+    var rq=db.transaction('kv').objectStore('kv').get(k); rq.onsuccess=function(){ res(rq.result); }; rq.onerror=function(){ rej(rq.error); }; }); }); }
+  function idbDel(k){ return idbOpen().then(function(db){ return new Promise(function(res,rej){
+    var tx=db.transaction('kv','readwrite'); tx.objectStore('kv').delete(k);
+    tx.oncomplete=res; tx.onerror=function(){ rej(tx.error); }; }); }); }
+  function loadSaveHandle(){ if(!FS_OK) return Promise.resolve();
+    return idbGet('save-handle').then(function(h){ saveHandle=h||null; }).catch(function(){}); }
+  // Published data may have moved on while this page was open (another editor
+  // saved). True when the live file matches nothing this session has seen.
+  // Compared in canonical form: the Power Automate flow re-serializes the JSON
+  // (minified), so byte comparison would flag our own change as foreign. _meta
+  // is excluded too: the merge bot bumps rev on every publish, and a rev bump
+  // alone is not a foreign content change.
+  function canon(t){ try{ var o=JSON.parse(t); if(o&&typeof o==='object') delete o._meta; return JSON.stringify(o); }catch(e){ return t; } }
+  function liveIsUnknown(){
+    if(!window.fetch) return Promise.resolve(false);
+    return fetch('ctls-data.json',{cache:'no-store'})
+      .then(function(r){ return r.ok?r.text():null; })
+      .then(function(t){ return t!=null && knownRaws.indexOf(canon(t))<0; })
+      .catch(function(){ return false; }); }
+  async function setupDirectSave(){
+    // Re-running this any time (via "Change save location") replaces the stored
+    // handle, so a save target picked before the folder was synced -- or pointed
+    // at the wrong place entirely -- can always be fixed by the editor herself.
+    try{
+      var opts={suggestedName:'ctls-data.json',
+        types:[{description:'JSON data',accept:{'application/json':['.json']}}]};
+      // Open the picker where it will do the most good: at the current save
+      // location when changing it, otherwise in Documents (where OneDrive puts
+      // synced libraries) rather than Downloads.
+      opts.startIn = saveHandle || 'documents';
+      var h;
+      try{ h=await window.showSaveFilePicker(opts); }
+      catch(e){ if(e && e.name==='AbortError') throw e;
+        delete opts.startIn; h=await window.showSaveFilePicker(opts); }
+      // Guard against the classic miss: picking a brand-new file (e.g. in
+      // Downloads) instead of the existing ctls-data.json in the synced Finder
+      // Data folder. A save-picker target that already has content is the real
+      // shared file; a zero-byte one was just created by the picker itself.
+      var looksNew=false;
+      try{ var f=await h.getFile(); looksNew=(f.size===0); }catch(e){}
+      if(looksNew || h.name!=='ctls-data.json'){
+        if(!confirm('That looks like a NEW file'+(h.name!=='ctls-data.json'?' (named "'+h.name+'")':'')+', not the existing shared ctls-data.json.\n\nDirect save only publishes if you select the existing ctls-data.json inside your synced Finder Data folder. Saving anywhere else changes nothing on the live site.\n\nKeep this location anyway?')){
+          if(live) live.textContent='Save location not changed. In the SharePoint Finder Data library click Sync first, then choose Change save location and select the existing ctls-data.json in that synced folder.';
+          return; } }
+      saveHandle=h; try{ await idbSet('save-handle',h); }catch(e){}
+      await saveToFolder();
+    }catch(e){ if(e && e.name==='AbortError'){ if(live) live.textContent='Direct save was left as it was.'; }
+      else { if(live) live.textContent='Direct save setup did not complete. You can try again'+(pubOK()?', or use Publish.':'.'); } }
+  }
+  async function saveToFolder(){
+    if(!saveHandle) return setupDirectSave();
+    try{
+      var p=await saveHandle.queryPermission({mode:'readwrite'});
+      if(p!=='granted') p=await saveHandle.requestPermission({mode:'readwrite'});
+      if(p!=='granted'){
+        if(state.saved) state.saved.sync='fail';
+        render({keepScroll:true});
+        if(live) live.textContent='The browser needs permission to write the shared file. Click Save to the shared folder to grant it.';
+        return false; }
+      if(await liveIsUnknown()){
+        if(!confirm('The published data changed while this page was open (another editor likely saved). Saving now would overwrite their change with what you see here. Save anyway?')){
+          if(state.saved) state.saved.sync='fail'; render({keepScroll:true}); return false; } }
+      var text=JSON.stringify(payloadJSON(),null,1)+'\n';
+      var w=await saveHandle.createWritable(); await w.write(text); await w.close();
+      knownRaws.push(canon(text));
+      clearPendingLocal();
+      if(state.saved) state.saved.sync='ok'; else state.saved={title:null,action:null,sync:'ok'};
+      render({keepScroll:true});
+      if(live) live.textContent='Saved to the shared folder. Publishing runs on its own; the live site updates in a minute or two.';
+      return true;
+    }catch(e){
+      // A moved/renamed/deleted target invalidates the remembered handle.
+      if(e && (e.name==='NotFoundError'||e.name==='InvalidStateError')){ saveHandle=null; idbDel('save-handle').catch(function(){}); }
+      if(state.saved) state.saved.sync='fail';
+      render({keepScroll:true});
+      if(live) live.textContent='Could not write to the shared folder ('+((e&&e.name)||'error')+'). '+(pubOK()?'Use Publish instead.':'Try Change save location, or tell CTLS@rdpolytech.ca.');
+      return false;
+    }
+  }
+
+  /* ---------- render + events ---------- */
+  function render(opt){
+    document.body.classList.toggle('ai-on', state.ai);
+    document.body.classList.toggle('edit-on', state.edit);
+    document.body.classList.toggle('editing-form', !!state.editCtx);
+    if(state.editCtx){ main.innerHTML=restoreBar()+editFormView(); if(!(opt&&opt.keepScroll)) window.scrollTo(0,0); return; }
+    var bar = state.edit ? restoreBar()+savedBar()+editBar() : '';
+    if(state.view==='topic'){ main.innerHTML=bar+topicView(state.topic); }
+    else if(state.view==='task'){ main.innerHTML=bar+taskView(state.task); }
+    else { main.innerHTML=bar+teacherShell(); }
+    var q=document.getElementById('q'); if(q && q.value!==state.q && document.activeElement!==q){ q.value=state.q; }
+    var ai=document.getElementById('aichk'); if(ai){ ai.addEventListener('change',function(){ state.ai=ai.checked; var L=document.getElementById('live'); if(L) L.textContent=state.ai?'AI lens on. Open a topic to see where AI fits in each resource.':'AI lens off.'; paintResults(); }); }
+    var ig=document.getElementById('indigchk'); if(ig){ ig.addEventListener('change',function(){ state.indig=ig.checked; var L=document.getElementById('live'); if(L) L.textContent=state.indig?'Indigenization lens on. Open a topic to see where it fits in each resource.':'Indigenization lens off.'; paintResults(); }); }
+    var tt = state.view==='topic'&&state.topic ? state.topic+' | ' : state.view==='task'&&taskById(state.task) ? taskById(state.task).label+' | ' : '';
+    document.title = tt+'Resource Finder | CTLS';
+    if(!(opt&&opt.keepScroll)) window.scrollTo(0,0);
+  }
+  var searchTimer;
+  function onSearch(e){
+    if(state.editCtx) return; // the box is hidden while the form is open; belt and braces
+    state.q=e.target.value;
+    clearTimeout(searchTimer);
+    searchTimer=setTimeout(function(){
+      var nv = (state.q.trim().length>=2) ? 'search' : (state.view==='search' ? 'home' : state.view);
+      var changed = nv!==state.view; state.view = nv;
+      if(state.view==='search' || state.view==='home'){
+        // Input is in the header, outside #main, so focus survives either path.
+        if(document.getElementById('results')){ paintResults(); }
+        else if(changed){ render(); }
+        // Keep the URL shareable without flooding history while typing.
+        if(history.replaceState) history.replaceState(null,'', state.view==='search' ? '#/search/'+encodeURIComponent(state.q.trim()) : '#/');
+      }
+    },220);
+  }
+  /* ---------- hash routing ---------- */
+  // Every view has a shareable URL: #/topic/<id>, #/task/<id>, #/res/<slug>,
+  // #/search/<query>. Click handlers only change the hash; applyHash() is the
+  // single renderer, so pasted links, back/forward, and in-app clicks all take
+  // the same path. Search-as-you-type uses replaceState so it never floods history.
+  function slugify(t){return String(t).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');}
+  // A mangled share link (e.g. a stray "%") must fall back to home, not crash the boot render.
+  function safeDecode(s){try{return decodeURIComponent(s);}catch(e){return null;}}
+  function resBySlug(sl){for(var i=0;i<D.resources.length;i++){if(slugify(D.resources[i].title)===sl)return D.resources[i];}return null;}
+  function topicById(id){for(var i=0;i<D.topics.length;i++){if(D.topics[i].id===id)return D.topics[i];}return null;}
+  function nav(hash){ if(location.hash===hash){ applyHash(); } else { location.hash=hash; } }
+  function openTopic(name){ var t=topicByName(name); nav(t&&t.id?'#/topic/'+t.id:'#/'); }
+  function reveal(title){
+    setTimeout(function(){
+      var el=main.querySelector('[data-card="'+(window.CSS&&CSS.escape?CSS.escape(title):title.replace(/"/g,'\\"'))+'"]');
+      if(el){ el.classList.add('open'); el.scrollIntoView({behavior:'smooth',block:'center'}); el.style.outline='2px solid var(--lime)'; setTimeout(function(){el.style.outline='';},1600); }
+    },60);
+  }
+  function openResource(title){
+    var r=byTitle(title); if(!r) return;
+    var sel='[data-card="'+(window.CSS&&CSS.escape?CSS.escape(title):title.replace(/"/g,'\\"'))+'"]';
+    if(main.querySelector(sel)){
+      // Card already on screen (topic or task view): open it in place, and swap
+      // the URL quietly so what's on screen is what gets shared.
+      if(history.replaceState) history.replaceState(null,'','#/res/'+slugify(title));
+      reveal(title);
+    } else {
+      nav('#/res/'+slugify(title));
+    }
+  }
+  function applyHash(){
+    var h=location.hash||'', m;
+    // Some link renderers (e.g. SharePoint's Markdown web part) percent-encode the
+    // "/" in a fragment as %2F, so #/edit/x arrives as #%2Fedit%2Fx. Normalize it back
+    // so deep links route the same however they were rendered, shared, or copied.
+    h = h.replace(/%2f/gi,'/');
+    // Editor deep links (used by the staff SharePoint page). #/edit/<slug> and
+    // #/edit/new self-enable edit mode, so those links work without ?edit.
+    // ensureEditParam stamps ?edit into the URL so a reload keeps edit mode
+    // even after later navigation strips the #/edit hash (finding I).
+    if(m=h.match(/^#\/edit\/(.+)/)){ var sl=safeDecode(m[1]);
+      if(sl==='new'){ state.edit=true; ensureEditParam(); state.view='home'; state.topic=null; startEdit(null); return; }
+      var re=resBySlug(sl); if(re){ state.edit=true; ensureEditParam(); state.view='topic'; state.topic=re.topic; startEdit(re.title); return; } }
+    if(m=h.match(/^#\/topic\/([^\/]+)/)){ var t=topicById(safeDecode(m[1])); if(t){ state.editCtx=null; state.view='topic'; state.topic=t.name; render(); return; } }
+    if(m=h.match(/^#\/task\/([^\/]+)/)){ var id=safeDecode(m[1]); if(id&&taskById(id)){ state.editCtx=null; state.view='task'; state.task=id; render(); return; } }
+    if(m=h.match(/^#\/res\/([^\/]+)/)){ var r=resBySlug(safeDecode(m[1])); if(r){
+      if(state.edit){ state.view='topic'; state.topic=r.topic; startEdit(r.title); return; }   // in edit mode, open its form
+      state.view='topic'; state.topic=r.topic; render(); reveal(r.title); return; } }
+    if(m=h.match(/^#\/search\/(.+)/)){ var q=safeDecode(m[1]); if(q){ state.editCtx=null; state.q=q; state.view='search'; render(); return; } }
+    state.editCtx=null; state.view='home'; state.topic=null; state.task=null; state.q=''; render();
+  }
+  function ensureEditParam(){ if(!hasEditFlag() && history.replaceState){
+    history.replaceState(null,'', location.pathname+(location.search?location.search+'&edit':'?edit')+location.hash); } }
+  // Hash navigation (back button, pasted link) while a dirty draft is open asks
+  // before discarding; declining restores the URL the form was opened under.
+  var suppressHash=false;
+  window.addEventListener('hashchange', function(){
+    if(suppressHash){ suppressHash=false; return; }
+    if(state.editCtx && draftDirty() && !confirm('Leave this card? Your unsaved edits will be discarded.')){
+      suppressHash=true; location.hash=(state.editCtx.hash||'#/'); return; }
+    applyHash();
+  });
+
+  function cancelEdit(){ var tn=state.topic; state.editCtx=null;
+    var tp=tn?topicByName(tn):null; if(history.replaceState) history.replaceState(null,'', tp&&tp.id?'#/topic/'+tp.id:'#/');
+    render(); }
+  document.addEventListener('click',function(e){
+    // ---- editor actions (checked first; harmless when edit mode is off) ----
+    var ec=e.target.closest('[data-edit-card]'); if(ec){ startEdit(ec.getAttribute('data-edit-card')); return; }
+    if(e.target.closest('[data-add-res]')){ startEdit(null); return; }
+    if(e.target.closest('[data-cancel-edit]')){ if(!confirmDiscard()) return; cancelEdit(); return; }
+    if(e.target.closest('[data-apply-edit]')){ applyEdit(); return; }
+    if(e.target.closest('[data-publish]')){ publishData(); return; }
+    if(e.target.closest('[data-save-folder]')){ saveToFolder(); return; }
+    if(e.target.closest('[data-setup-save]')){ setupDirectSave(); return; }
+    if(e.target.closest('[data-dismiss-saved]')){ state.saved=null; render({keepScroll:true}); return; }
+    if(e.target.closest('[data-restore]')){
+      if(pending>0 && !confirm('Restoring will replace the changes you made in this visit. Continue?')) return;
+      var st=state.restore; state.restore=null;
+      if(st&&st.data){ for(var k in st.data){ if(Object.prototype.hasOwnProperty.call(st.data,k)) D[k]=st.data[k]; } pending=st.n||0; savePendingLocal(); }
+      render(); if(live) live.textContent='Earlier changes restored. '+(pubOK()?'Click Publish when you are ready to send them.':'Save to the shared folder when you are ready to send them.'); return; }
+    if(e.target.closest('[data-discard-restore]')){ state.restore=null; clearPendingLocal(); render({keepScroll:true}); return; }
+    if(e.target.closest('[data-errjump]')){ var eb=document.getElementById('editerrs'); if(eb) eb.scrollIntoView({behavior:'smooth',block:'center'}); return; }
+    var ar=e.target.closest('[data-addrow]'); if(ar){ addRow(ar.getAttribute('data-addrow')); return; }
+    var dr=e.target.closest('[data-delrow]'); if(dr){ delRow(dr); return; }
+    // ---- reader actions ----
+    var t=e.target.closest('[data-topic]'); if(t){ openTopic(t.getAttribute('data-topic')); return; }
+    var md=e.target.closest('[data-mode]'); if(md){ state.mode=md.getAttribute('data-mode');
+      var bs=document.querySelectorAll('.modetab');
+      for(var i=0;i<bs.length;i++){ var on=bs[i]===md; bs[i].classList.toggle('on',on); bs[i].setAttribute('aria-pressed',on); }
+      paintResults(); return; }
+    var tk=e.target.closest('[data-task]'); if(tk){ nav('#/task/'+encodeURIComponent(tk.getAttribute('data-task'))); return; }
+    if(e.target.closest('[data-home]')){ nav('#/'); return; }
+    var res=e.target.closest('[data-res]'); if(res){ e.preventDefault(); openResource(res.getAttribute('data-res')); return; }
+    var ex=e.target.closest('[data-expand]'); if(ex){ var card=ex.closest('.rescard'); card.classList.toggle('open');
+      var open=card.classList.contains('open');
+      ex.textContent=open?'Show less':'Details & related';
+      // Collapsing a tall card can leave the viewport past the card (scroll
+      // anchoring jump); pull the card back into view so hover lands sanely.
+      if(!open && card.getBoundingClientRect().top<0){ card.scrollIntoView({block:'start'}); }
+      return; }
+  });
+  document.addEventListener('keydown',function(e){
+    // In the form, Escape means "cancel this edit" (with a discard check), never "go home".
+    if(e.key==='Escape' && state.editCtx){ if(confirmDiscard()) cancelEdit(); return; }
+    if(e.key==='Escape'){ var qq=document.getElementById('q'); if(qq&&qq.value){ qq.value=''; state.q=''; }
+      if(state.view!=='home'){ nav('#/'); } }
+    if(e.key==='/' && !state.editCtx && document.activeElement.tagName!=='INPUT' && document.activeElement.tagName!=='TEXTAREA'){ var q=document.getElementById('q'); if(q){e.preventDefault();q.focus();} }
+  });
+
+  // Live preview + validation as the editor types. Only updates the preview and
+  // error panel (never the inputs), so the field keeping focus is never rebuilt.
+  document.addEventListener('input',function(e){
+    if(!state.editCtx) return; var f=currentForm(); if(!f||!f.contains(e.target)) return;
+    var d=readDraft(f); state.editCtx.draft=d;
+    var pv=document.getElementById('editprev-body'); if(pv) pv.innerHTML=resCard(normalizeForStore(d));
+    var errs=validate(d); var box=document.getElementById('editerrs'); if(box) box.innerHTML=errBlock(errs);
+    var mini=document.getElementById('editerrs-mini'); if(mini) mini.innerHTML=miniErrs(errs);
+    paintFieldErrs(errs);
+  });
+  // Last line of defence: warn before the tab closes on a dirty draft or
+  // applied changes that were never downloaded.
+  window.addEventListener('beforeunload',function(e){
+    if((state.editCtx && draftDirty()) || pending>0){ e.preventDefault(); e.returnValue=''; }
+  });
+
+  // Edit mode is switched on only by opening the page with ?edit in the URL
+  // (e.g. from the staff-only SharePoint page of edit links). The plain Finder
+  // URL has no ?edit, so readers get zero edit chrome.
+  function hasEditFlag(){ return /[?&]edit\b/i.test(location.search||''); }
+
+  // ---------- boot: load data, then wire the shell ----------
+  function boot(){
+    state.edit = hasEditFlag();
+    document.getElementById('foot-note').innerHTML='Teaching resources from the <b>Centre of Teaching, Learning &amp; Scholarship</b>, Red Deer Polytechnic. '
+      +'Colour-coded blocks inside each card show where the information comes from; teal "outside research" notes were added July 2026 with their sources linked. '
+      +'Questions or a resource to suggest? Email <a href="mailto:CTLS@rdpolytech.ca">CTLS@rdpolytech.ca</a>.';
+    var qEl=document.getElementById('q'); if(qEl){ qEl.addEventListener('input',onSearch); }
+    applyHash();
+    // After routing (a #/edit deep link may have just enabled edit mode): offer
+    // back any changes applied in an earlier visit but never downloaded, and
+    // pick up the remembered direct-save handle so the bars show the right buttons.
+    checkRestore(); if(state.restore) render({keepScroll:true});
+    loadSaveHandle().then(function(){ if(state.edit && saveHandle) render({keepScroll:true}); });
+  }
+  // Primary source = ctls-data.json (the editable document). If fetch is unavailable
+  // (opened as a file://) fall back to window.CTLS from the ctls-data.js script tag.
+  // Every raw text this session has seen or written is kept so the pre-save
+  // conflict check can tell "someone else published" from "that's ours".
+  function loadData(){
+    if(!window.fetch) return Promise.resolve(window.CTLS||null);
+    return fetch('ctls-data.json',{cache:'no-store'})
+      .then(function(r){ if(!r.ok) throw new Error('http '+r.status); return r.text(); })
+      .then(function(t){ knownRaws.push(canon(t)); return JSON.parse(t); })
+      .catch(function(){ return window.CTLS||null; });
+  }
+  loadData().then(function(data){
+    if(data){ for(var k in data){ if(Object.prototype.hasOwnProperty.call(data,k)) D[k]=data[k]; } }
+    ['topics','resources','tasks','glossary','edges'].forEach(function(k){ if(!D[k]) D[k]=[]; });
+    boot();
+  });
+})();
+</script>
+</body>
+</html>
