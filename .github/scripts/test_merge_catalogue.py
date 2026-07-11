@@ -278,9 +278,62 @@ class MergeTests(unittest.TestCase):
         for coll in ("topics", "resources", "tasks", "glossary"):
             self.assertEqual(merged[coll], live[coll], coll + " changed in a no-op merge")
         self.assertEqual(merged["edges"], live["edges"])
-        self.assertEqual(merged["_meta"], {"rev": 1})
+        # rev is whatever the live file currently carries, plus the bot's bump; pinning
+        # a literal here just breaks the suite every time the catalogue is published.
+        self.assertEqual(merged["_meta"], {"rev": live.get("_meta", {}).get("rev", 0) + 1})
         # the one intended correction: stale derived count fixed (was 27 in the live file)
         self.assertEqual(merged["meta"]["counts"]["edges"], len(live["edges"]))
+
+    def test_rename_racing_a_reference_add_leaves_no_dangling_refs(self):
+        """A renames a card; B (same base) points a DIFFERENT item at the old title.
+
+        Both files are self-consistent, the items touched do not overlap, so the merge
+        is clean -- and main would reference a resource that no longer exists, showing
+        as a dead entry in the topic's "Start here" list. The merge must not publish
+        that.
+        """
+        live = json.loads(LIVE.read_text(encoding="utf-8"))
+        old = live["resources"][0]["title"]
+        new = old + " (renamed)"
+
+        base = copy.deepcopy(live)
+
+        theirs = copy.deepcopy(live)                      # editor A: rename, refs rewritten
+        theirs["resources"][0]["title"] = new
+        for tp in theirs["topics"]:
+            tp["startHere"] = [new if t == old else t for t in tp.get("startHere", [])]
+        for r in theirs["resources"]:
+            r["related"] = [new if t == old else t for t in r.get("related", [])]
+        for e in theirs["edges"]:
+            if e.get("from") == old: e["from"] = new
+            if e.get("to") == old: e["to"] = new
+        for tk in theirs["tasks"]:
+            for s in tk.get("steps", []):
+                if s.get("res") == old: s["res"] = new
+
+        main = copy.deepcopy(live)                        # editor B: add a ref to the OLD title
+        other = next(tp for tp in main["topics"] if old not in tp.get("startHere", []))
+        other.setdefault("startHere", []).append(old)
+
+        merged, conflicts = self.merge(base, theirs, main)
+        self.assertEqual(conflicts, [], "rename vs unrelated reference-add should merge cleanly")
+
+        titles = {r["title"] for r in merged["resources"]}
+        self.assertIn(new, titles)
+        self.assertNotIn(old, titles)
+        for tp in merged["topics"]:
+            for t in tp.get("startHere", []):
+                self.assertIn(t, titles, "startHere points at a resource that does not exist")
+        for tk in merged["tasks"]:
+            for s in tk.get("steps", []):
+                if s.get("res"):
+                    self.assertIn(s["res"], titles, "task step points at a missing resource")
+        for r in merged["resources"]:
+            for t in r.get("related", []):
+                self.assertIn(t, titles, "related points at a missing resource")
+        for e in merged["edges"]:
+            self.assertIn(e["from"], titles)
+            self.assertIn(e["to"], titles)
 
     def test_live_catalogue_realistic_two_editor_day(self):
         live = json.loads(LIVE.read_text(encoding="utf-8"))

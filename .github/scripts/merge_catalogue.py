@@ -162,7 +162,64 @@ def merge_collection(name, keyf, base, theirs, main, conflicts):
     return [resolved[k] for k in out_keys]
 
 
+def drop_dangling_refs(payload):
+    """Remove references to resource titles that no longer exist, and report them.
+
+    Resources are keyed by title, and four other structures point AT that title:
+    topics[].startHere, tasks[].steps[].res, resources[].related, and edges from/to.
+    The editor rewrites all four when it renames a card, but only inside its own
+    file. Two editors from the same base can each be self-consistent and still merge
+    into a broken whole: A renames X to Y while B adds a reference to X somewhere
+    else. Different items, no conflict, clean merge -- and main now points at a
+    resource that does not exist. On the live site those show as dead entries in a
+    topic's "Start here" list and in task steps. Drop them so a merge cannot publish
+    a broken reference; the returned list is surfaced in the run log.
+    """
+    titles = {r.get("title") for r in payload.get("resources", []) if isinstance(r, dict)}
+    dropped = []
+
+    for topic in payload.get("topics", []):
+        if isinstance(topic, dict) and isinstance(topic.get("startHere"), list):
+            keep = [t for t in topic["startHere"] if t in titles]
+            for t in topic["startHere"]:
+                if t not in titles:
+                    dropped.append("topic %r startHere -> %r" % (topic.get("name"), t))
+            topic["startHere"] = keep
+
+    for task in payload.get("tasks", []):
+        if isinstance(task, dict) and isinstance(task.get("steps"), list):
+            keep = [s for s in task["steps"]
+                    if not (isinstance(s, dict) and s.get("res") and s["res"] not in titles)]
+            for s in task["steps"]:
+                if isinstance(s, dict) and s.get("res") and s["res"] not in titles:
+                    dropped.append("task %r step -> %r" % (task.get("id"), s["res"]))
+            task["steps"] = keep
+
+    for res in payload.get("resources", []):
+        if isinstance(res, dict) and isinstance(res.get("related"), list):
+            keep = [t for t in res["related"] if t in titles]
+            for t in res["related"]:
+                if t not in titles:
+                    dropped.append("resource %r related -> %r" % (res.get("title"), t))
+            res["related"] = keep
+
+    edges = payload.get("edges")
+    if isinstance(edges, list):
+        keep = []
+        for e in edges:
+            if isinstance(e, dict) and (e.get("from") not in titles or e.get("to") not in titles):
+                dropped.append("edge %r -> %r" % (e.get("from"), e.get("to")))
+            else:
+                keep.append(e)
+        payload["edges"] = keep
+
+    return dropped
+
+
 def recompute_derived(payload):
+    # Order matters: drop dangling references FIRST, so the counts below describe
+    # what actually ships rather than counting entries that are about to vanish.
+    dropped = drop_dangling_refs(payload)
     resources = payload.get("resources", [])
     meta = payload.get("meta")
     if isinstance(meta, dict) and isinstance(meta.get("counts"), dict):
@@ -172,6 +229,7 @@ def recompute_derived(payload):
     for topic in payload.get("topics", []):
         if isinstance(topic, dict) and "name" in topic:
             topic["resourceCount"] = sum(1 for r in resources if r.get("topic") == topic["name"])
+    return dropped
 
 
 def merge_payloads(base, theirs, main):
@@ -216,7 +274,8 @@ def merge_payloads(base, theirs, main):
     if conflicts:
         return None, conflicts
 
-    recompute_derived(out)
+    for ref in recompute_derived(out):
+        print("dropped dangling reference: %s" % ref, file=sys.stderr)
     new_meta = dict(main_meta)
     # baseRev is an editor-save annotation; it must not fossilize into main's _meta
     # (interim straight-to-main commits can leave one behind).

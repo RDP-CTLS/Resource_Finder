@@ -34,7 +34,7 @@ from merge_catalogue import merge_payloads, render_report
 
 DATA = "ctls-data.json"
 MAX_WALK = 500          # how far back in main history a base rev may sit
-PUSH_ATTEMPTS = 3
+PUSH_ATTEMPTS = 6  # merges run per-branch now, so genuine push races are expected
 EDITOR_URL = "https://rdp-ctls.github.io/Resource_Finder/?edit"
 BOT_NAME = "github-actions[bot]"
 BOT_EMAIL = "41898282+github-actions[bot]@users.noreply.github.com"

@@ -8,9 +8,15 @@ on:
     branches:
       - 'save/**'
 
-# one merge at a time, in order; never cancel a merge in flight
+# Serialize PER BRANCH, not globally. A concurrency group holds at most one running
+# run plus one pending run: with a single global group, a third editor saving while
+# a merge is in flight silently CANCELS the queued second editor's run, and that save
+# is never merged -- no issue, no error, and their page already said "live in a
+# minute or two". Per-branch groups keep every editor's save in its own lane; two
+# editors' runs may then overlap, which is safe because merge_save.py re-fetches main
+# and re-merges on each push attempt (PUSH_ATTEMPTS covers the races).
 concurrency:
-  group: merge-to-main
+  group: merge-${{ github.ref }}
   cancel-in-progress: false
 
 permissions:

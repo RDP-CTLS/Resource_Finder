@@ -278,6 +278,13 @@
 
   function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  // esc() stops a value breaking OUT of an href, but it happily passes a
+  // "javascript:" scheme through -- so every link built from catalogue data goes
+  // through here first. The editor's validate() enforces http(s) at edit time,
+  // but nothing revalidates a file that reaches the repo another way, and the
+  // merge bot does not inspect field values. Anything not http(s) renders as no
+  // link at all rather than a clickable script.
+  function safeUrl(u){ u=String(u==null?'':u).trim(); return /^https?:\/\//i.test(u)?u:''; }
   function byTitle(t){for(var i=0;i<D.resources.length;i++){if(D.resources[i].title===t)return D.resources[i];}return null;}
   function topicByName(n){for(var i=0;i<D.topics.length;i++){if(D.topics[i].name===n)return D.topics[i];}return null;}
   function topicResources(topicName){return D.resources.filter(function(r){return r.topic===topicName;});}
@@ -381,7 +388,7 @@
     }
     var starts = (t.startHere||[]).map(function(title){
       var rr = byTitle(title);
-      var pdf = (rr && rr.url) ? ' <a class="mini-pdf" href="'+esc(rr.url)+'" target="_blank" rel="noopener" aria-label="Open '+esc(title)+' as a PDF, in a new tab">PDF &#8599;</a>' : '';
+      var pdf = (rr && safeUrl(rr.url)) ? ' <a class="mini-pdf" href="'+esc(safeUrl(rr.url))+'" target="_blank" rel="noopener" aria-label="Open '+esc(title)+' as a PDF, in a new tab">PDF &#8599;</a>' : '';
       return '<li><span><a href="#/res/'+slugify(title)+'" data-res="'+esc(title)+'">'+esc(title)+'</a>'+pdf+'</span></li>';
     }).join('');
     var startBlock = starts ? '<div class="starthere"><div class="k">Start here when you are short on time</div><ol>'+starts+'</ol></div>' : '';
@@ -400,7 +407,7 @@
       +'<p class="blurb">'+esc(t.intro||'')+'</p></div>';
     var steps = (t.steps||[]).map(function(st){
       var rr = byTitle(st.res);
-      var pdf = (rr && rr.url) ? ' <a class="mini-pdf" href="'+esc(rr.url)+'" target="_blank" rel="noopener" aria-label="Open '+esc(st.res)+' as a PDF, in a new tab">PDF &#8599;</a>' : '';
+      var pdf = (rr && safeUrl(rr.url)) ? ' <a class="mini-pdf" href="'+esc(safeUrl(rr.url))+'" target="_blank" rel="noopener" aria-label="Open '+esc(st.res)+' as a PDF, in a new tab">PDF &#8599;</a>' : '';
       var note = st.note ? ' <span class="stepnote">'+esc(st.note)+'</span>' : '';
       return '<li><span><a href="#/res/'+slugify(st.res)+'" data-res="'+esc(st.res)+'">'+esc(st.res)+'</a>'+pdf+note+'</span></li>';
     }).join('');
@@ -462,18 +469,20 @@
     var lensRows = ''
       + (state.ai && hasAi?'<div class="infoblock ctls"><div class="blab">Where AI fits <span class="prov ctls">CTLS context</span></div><p>'+esc(r.ai)+'</p></div>':'')
       + (state.indig?'<div class="infoblock gated"><div class="blab">Where Indigenization fits <span class="prov ctls">CTLS context</span></div><p>Consider whose knowledge this resource centres and how Indigenous perspectives and ways of knowing could be woven in. The Indigenous Learning Designer can help. <i>(Owner-gated, in development.)</i></p></div>':'');
-    var openLink = r.url ? '<div class="openrow"><a class="openres" href="'+esc(r.url)+'" target="_blank" rel="noopener"'+(r.status==='refreshing'?' title="Original version - a refreshed edition is on the way"':'')+'>Open the resource (PDF) &#8599;</a></div>' : '';
+    var rUrl = safeUrl(r.url);
+    var openLink = rUrl ? '<div class="openrow"><a class="openres" href="'+esc(rUrl)+'" target="_blank" rel="noopener"'+(r.status==='refreshing'?' title="Original version - a refreshed edition is on the way"':'')+'>Open the resource (PDF) &#8599;</a></div>' : '';
     // Situational scent, visible without expanding (CTLS-written, hence the green label).
     var when = (r.useWhen&&r.useWhen.length)?'<p class="usewhen"><span class="uw">Use this when</span>'+r.useWhen.map(esc).join(' &middot; ')+'</p>':'';
     // Page anchors: a mini table of contents INTO the PDF (#page=N works because the
     // rdpolytech media URLs serve inline). Only multi-page PDFs carry anchors.
-    var jumps = (r.url&&r.anchors&&r.anchors.length)?'<div class="jumps"><span class="jlab">Jump to:</span>'
-      +r.anchors.map(function(a){return '<a href="'+esc(r.url)+'#page='+(+a.page||1)+'" target="_blank" rel="noopener">'+esc(a.label)+' (p. '+esc(a.page)+') &#8599;</a>';}).join('')+'</div>':'';
+    var jumps = (rUrl&&r.anchors&&r.anchors.length)?'<div class="jumps"><span class="jlab">Jump to:</span>'
+      +r.anchors.map(function(a){return '<a href="'+esc(rUrl)+'#page='+(+a.page||1)+'" target="_blank" rel="noopener">'+esc(a.label)+' (p. '+esc(a.page)+') &#8599;</a>';}).join('')+'</div>':'';
     var inside = (r.concepts&&r.concepts.length)?'<div class="infoblock inside"><div class="blab">What&#39;s inside <span class="prov res">From the resource</span></div><ul>'
       +r.concepts.map(function(c){return '<li>'+esc(c)+'</li>';}).join('')+'</ul></div>':'';
     // Research notes carry their citation on every line - nothing renders without a source.
     var research = (r.research&&r.research.length)?'<div class="infoblock research"><div class="blab">From the research <span class="prov ext">Outside research</span></div><ul>'
-      +r.research.map(function(f){return '<li>'+esc(f.fact)+' <a class="cite" href="'+esc(f.url)+'" target="_blank" rel="noopener">'+esc(f.source)+' &#8599;</a></li>';}).join('')+'</ul></div>':'';
+      +r.research.map(function(f){ var fu=safeUrl(f.url);
+        return '<li>'+esc(f.fact)+' '+(fu?'<a class="cite" href="'+esc(fu)+'" target="_blank" rel="noopener">'+esc(f.source)+' &#8599;</a>':'<span class="cite">'+esc(f.source)+'</span>')+'</li>';}).join('')+'</ul></div>':'';
     var inner = inside
       + (r.poly?'<div class="infoblock ctls"><div class="blab">Polytechnic angle <span class="prov ctls">CTLS context</span></div><p>'+esc(r.poly)+'</p></div>':'')
       + research
@@ -719,6 +728,13 @@
     return '<div class="savedbar" role="status"><p class="msg">'+head+'Step 2: set up direct save to send this live &mdash; one-time setup, and it carries all the changes you have applied.</p>'
      +'<button class="ebtn primary" type="button" data-setup-save>Set up direct save (one time)</button>'
      +'<button class="ebtn ghost" type="button" data-dismiss-saved>Dismiss</button></div>'; }
+  // The live catalogue could not be fetched, so what is on screen is the baked-in
+  // snapshot and may be months out of date. Say so plainly rather than quietly
+  // serving stale content, and explain why editing is off.
+  function staleBar(){
+    if(!staleFallback) return '';
+    return '<div class="editbar" role="status"><p><b>&#9888; Showing an offline copy.</b> The live catalogue could not be loaded, so this page is showing a saved snapshot that may be out of date. '
+      +(hasEditFlag()?'Editing is turned off here on purpose: saving from a stale copy would overwrite other people&#39;s published changes. Reload the page, and if it keeps happening tell CTLS@rdpolytech.ca.':'Reload the page to try again.')+'</p></div>'; }
   // Offer to bring back changes that were applied in an earlier visit but never downloaded.
   function restoreBar(){
     if(!state.restore) return '';
@@ -826,7 +842,17 @@
   // (minified), so byte comparison would flag our own change as foreign. _meta
   // is excluded too: the merge bot bumps rev on every publish, and a rev bump
   // alone is not a foreign content change.
-  function canon(t){ try{ var o=JSON.parse(t); if(o&&typeof o==='object') delete o._meta; return JSON.stringify(o); }catch(e){ return t; } }
+  // Normalize away everything AUTOMATION owns before comparing, so our own publish
+  // does not read back as a stranger's. _meta.rev is bumped by the bot on every
+  // publish; meta.counts and topics[].resourceCount are recomputed by it too (this
+  // page never updates them). Without stripping these, the second save of any
+  // session that added or moved a resource would falsely warn "the published data
+  // changed while this page was open... saving would overwrite their change".
+  function canon(t){ try{ var o=JSON.parse(t); if(!o||typeof o!=='object') return t;
+      delete o._meta;
+      if(o.meta && typeof o.meta==='object') delete o.meta.counts;
+      (o.topics||[]).forEach(function(tp){ if(tp && typeof tp==='object') delete tp.resourceCount; });
+      return JSON.stringify(o); }catch(e){ return t; } }
   function liveIsUnknown(){
     if(!window.fetch) return Promise.resolve(false);
     return fetch('ctls-data.json',{cache:'no-store'})
@@ -852,10 +878,20 @@
       // Downloads) instead of the existing ctls-data.json in the synced Finder
       // Data folder. A save-picker target that already has content is the real
       // shared file; a zero-byte one was just created by the picker itself.
-      var looksNew=false;
-      try{ var f=await h.getFile(); looksNew=(f.size===0); }catch(e){}
-      if(looksNew || h.name!=='ctls-data.json'){
-        if(!confirm('That looks like a NEW file'+(h.name!=='ctls-data.json'?' (named "'+h.name+'")':'')+', not the existing shared ctls-data.json.\n\nDirect save only publishes if you select the existing ctls-data.json inside your synced Finder Data folder. Saving anywhere else changes nothing on the live site.\n\nKeep this location anyway?')){
+      // A brand-new file is zero bytes; but an old ctls-data.json left in Downloads by
+      // the retired Publish flow is neither empty nor misnamed, so also require the
+      // picked file to actually PARSE as the catalogue. That still cannot tell a stale
+      // copy from the synced one (same shape), which is why the name check stays and
+      // why "Change save location" exists.
+      var badPick='';
+      try{
+        var f=await h.getFile();
+        if(f.size===0) badPick='it is empty, so it is a brand-new file';
+        else { var txt=await f.text(); var parsed=JSON.parse(txt);
+          if(!parsed || !Array.isArray(parsed.resources)) badPick='it does not look like the catalogue (no resource list inside)'; }
+      }catch(e){ badPick='it could not be read as the catalogue ('+((e&&e.name)||'error')+')'; }
+      if(badPick || h.name!=='ctls-data.json'){
+        if(!confirm('That does not look like the shared ctls-data.json'+(h.name!=='ctls-data.json'?' (you picked "'+h.name+'")':'')+(badPick?':\n\n'+badPick:'')+'.\n\nDirect save only publishes if you select the existing ctls-data.json inside your synced Finder Data folder. Saving anywhere else changes nothing on the live site.\n\nKeep this location anyway?')){
           if(live) live.textContent='Save location not changed. In the SharePoint Finder Data library click Sync first, then choose Change save location and select the existing ctls-data.json in that synced folder.';
           return; } }
       saveHandle=h; try{ await idbSet('save-handle',h); }catch(e){}
@@ -900,7 +936,7 @@
     document.body.classList.toggle('edit-on', state.edit);
     document.body.classList.toggle('editing-form', !!state.editCtx);
     if(state.editCtx){ main.innerHTML=restoreBar()+editFormView(); if(!(opt&&opt.keepScroll)) window.scrollTo(0,0); return; }
-    var bar = state.edit ? restoreBar()+savedBar()+editBar() : '';
+    var bar = staleBar() + (state.edit ? restoreBar()+savedBar()+editBar() : '');
     if(state.view==='topic'){ main.innerHTML=bar+topicView(state.topic); }
     else if(state.view==='task'){ main.innerHTML=bar+taskView(state.task); }
     else { main.innerHTML=bar+teacherShell(); }
@@ -1061,7 +1097,7 @@
 
   // ---------- boot: load data, then wire the shell ----------
   function boot(){
-    state.edit = hasEditFlag();
+    state.edit = hasEditFlag() && !staleFallback;
     document.getElementById('foot-note').innerHTML='Teaching resources from the <b>Centre of Teaching, Learning &amp; Scholarship</b>, Red Deer Polytechnic. '
       +'Colour-coded blocks inside each card show where the information comes from; teal "outside research" notes were added July 2026 with their sources linked. '
       +'Questions or a resource to suggest? Email <a href="mailto:CTLS@rdpolytech.ca">CTLS@rdpolytech.ca</a>.';
@@ -1077,12 +1113,19 @@
   // (opened as a file://) fall back to window.CTLS from the ctls-data.js script tag.
   // Every raw text this session has seen or written is kept so the pre-save
   // conflict check can tell "someone else published" from "that's ours".
+  // ctls-data.js is a snapshot baked in at build time and is NOT republished by the
+  // merge bot, so it drifts stale the moment anyone publishes. Falling back to it
+  // silently is dangerous in edit mode: the editor would load a stale catalogue,
+  // apply a change, and save the whole stale file back over everyone else's work.
+  // (The merge bot's baseRev check would reject it, but only after the editor lost
+  // their work.) So record when we fall back, and edit mode refuses to run on it.
+  var staleFallback=false;
   function loadData(){
-    if(!window.fetch) return Promise.resolve(window.CTLS||null);
+    if(!window.fetch){ staleFallback=true; return Promise.resolve(window.CTLS||null); }
     return fetch('ctls-data.json',{cache:'no-store'})
       .then(function(r){ if(!r.ok) throw new Error('http '+r.status); return r.text(); })
       .then(function(t){ knownRaws.push(canon(t)); return JSON.parse(t); })
-      .catch(function(){ return window.CTLS||null; });
+      .catch(function(){ staleFallback=true; return window.CTLS||null; });
   }
   loadData().then(function(data){
     if(data){ for(var k in data){ if(Object.prototype.hasOwnProperty.call(data,k)) D[k]=data[k]; } }
