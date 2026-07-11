@@ -748,7 +748,7 @@
   function restoreBar(){
     if(!state.restore) return '';
     var when=''; try{ if(state.restore.when){ when=' on '+new Date(state.restore.when).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}); } }catch(e){}
-    return '<div class="restorebar" role="status"><p class="msg"><b>Unfinished changes found.</b> You made '+state.restore.n+' change'+(state.restore.n===1?'':'s')+' here'+when+' that '+(state.restore.n===1?'was':'were')+' never downloaded. Bring '+(state.restore.n===1?'it':'them')+' back?</p>'
+    return '<div class="restorebar" role="status"><p class="msg"><b>Unfinished changes found.</b> You made '+state.restore.n+' change'+(state.restore.n===1?'':'s')+' here'+when+' that never reached the live site. Bring '+(state.restore.n===1?'it':'them')+' back?</p>'
      +'<button class="ebtn primary" type="button" data-restore>Restore</button>'
      +'<button class="ebtn ghost" type="button" data-discard-restore>Discard them</button></div>'; }
 
@@ -832,17 +832,20 @@
     for(k in store){ if(!Object.prototype.hasOwnProperty.call(store,k)) continue;
       if(JSON.stringify(store[k])!==JSON.stringify(prev?prev[k]:undefined)) e[k]=store[k]; }
     sessionExpect[store.title]=e; }
-  function publishedYet(){
-    if(!window.fetch) return Promise.resolve(false);
+  // Is every change in `expect` visible on the live site right now?
+  function publishedYet(expect){
+    expect = expect || sessionExpect;
+    var any=false, t0; for(t0 in expect){ if(Object.prototype.hasOwnProperty.call(expect,t0)) any=true; }
+    if(!any || !window.fetch) return Promise.resolve(false);
     return fetch('ctls-data.json',{cache:'no-store'})
       .then(function(r){ return r.ok?r.text():null; })
       .then(function(t){
         if(t==null) return false;
         var o; try{ o=JSON.parse(t); }catch(e){ return false; }
         var byT={}; (o.resources||[]).forEach(function(r){ if(r&&r.title) byT[r.title]=r; });
-        for(var title in sessionExpect){ if(!Object.prototype.hasOwnProperty.call(sessionExpect,title)) continue;
+        for(var title in expect){ if(!Object.prototype.hasOwnProperty.call(expect,title)) continue;
           var lr=byT[title]; if(!lr) return false;
-          var e=sessionExpect[title], k;
+          var e=expect[title], k;
           for(k in e){ if(!Object.prototype.hasOwnProperty.call(e,k)) continue;
             if(JSON.stringify(lr[k])!==JSON.stringify(e[k])) return false; } }
         return true; })
@@ -871,11 +874,24 @@
   // Applied-but-not-published changes are mirrored to localStorage so a closed tab,
   // a crash, or a save that never reaches the site can offer them back next visit.
   var pending=0, LS_KEY='rf-unsent-changes';
-  function savePendingLocal(){ try{ localStorage.setItem(LS_KEY, JSON.stringify({when:new Date().toISOString(), n:pending, data:payloadJSON()})); }catch(e){} }
+  // The expectation rides along with the backup: the confirm loop only lives as long as
+  // the tab does, and an editor who saves and immediately closes the tab is the normal
+  // case. Without this, their perfectly-published change would still be sitting in the
+  // backup next visit and they would be told they had "unfinished changes" and invited
+  // to restore and re-save content that is already live.
+  function savePendingLocal(){ try{ localStorage.setItem(LS_KEY, JSON.stringify({when:new Date().toISOString(), n:pending, data:payloadJSON(), expect:sessionExpect})); }catch(e){} }
   function clearPendingLocal(){ pending=0; try{ localStorage.removeItem(LS_KEY); }catch(e){} }
   function checkRestore(){ if(!state.edit || pending>0) return;
     try{ var raw=localStorage.getItem(LS_KEY); if(!raw) return; var st=JSON.parse(raw);
       if(st && st.n>0 && st.data) state.restore=st; }catch(e){} }
+  // Before offering a restore, make sure it is not already published. Backups written
+  // before this existed carry no expectation; those still get offered, as before.
+  function dropRestoreIfAlreadyLive(){
+    if(!state.restore || !state.restore.expect) return;
+    publishedYet(state.restore.expect).then(function(ok){
+      if(!ok) return;
+      clearPendingLocal(); state.restore=null; render({keepScroll:true});
+      if(live) live.textContent='Your last change had already gone live, so there is nothing to restore.'; }); }
 
   /* ---- direct save into the OneDrive-synced "Finder Data" folder ----
      The SharePoint library is the publish gate: its permissions decide who may
@@ -1061,6 +1077,35 @@
       nav('#/res/'+slugify(title));
     }
   }
+  // A link pointed at a card that no longer answers to that name -- almost always a
+  // rename, since slugs are derived from titles and the staff SharePoint page is full
+  // of these links. A rename usually keeps the front of the title ("...for Learning
+  // (UDL)" -> "...for Learning (UDL) v2"), so the renamed card is the one whose slug
+  // shares the longest prefix with the dead one. Find it and just open it. Note we
+  // cannot search on the slug words: slugs drop punctuation, and search is a plain
+  // substring match, so "a process for getting started universal..." never matches the
+  // real title "A Process for Getting Started: Universal..." (the colon).
+  function closestBySlug(slug){
+    var target=String(slug||''), best=null, bestLen=0;
+    D.resources.forEach(function(r){
+      var s=slugify(r.title||''), n=0;
+      while(n<s.length && n<target.length && s.charAt(n)===target.charAt(n)) n++;
+      if(n>bestLen){ bestLen=n; best=r; } });
+    return bestLen>=10 ? best : null; }   // 10 chars of slug is well past coincidence
+  function deadLink(slug, wantEdit){
+    if(wantEdit){ state.edit=true; ensureEditParam(); }
+    state.editCtx=null;
+    var near=closestBySlug(slug);
+    if(near){
+      state.view='topic'; state.topic=near.topic;
+      if(wantEdit){ startEdit(near.title); } else { render(); reveal(near.title); }
+      if(live) live.textContent='That link points to an older name for this resource. It is now called "'+near.title+'" -- opened it for you. The link itself is out of date; tell CTLS so it can be refreshed.';
+      return; }
+    // Nothing close: fall back to a search on the first few words of the slug.
+    state.q=String(slug||'').replace(/-+/g,' ').trim().split(/\s+/).slice(0,4).join(' ');
+    state.view='search'; render();
+    if(live) live.textContent='That link points to a resource that has been renamed or removed. Here are the closest matches.';
+    return; }
   function applyHash(){
     var h=location.hash||'', m;
     // Some link renderers (e.g. SharePoint's Markdown web part) percent-encode the
@@ -1073,12 +1118,17 @@
     // even after later navigation strips the #/edit hash (finding I).
     if(m=h.match(/^#\/edit\/(.+)/)){ var sl=safeDecode(m[1]);
       if(sl==='new'){ state.edit=true; ensureEditParam(); state.view='home'; state.topic=null; startEdit(null); return; }
-      var re=resBySlug(sl); if(re){ state.edit=true; ensureEditParam(); state.view='topic'; state.topic=re.topic; startEdit(re.title); return; } }
+      var re=resBySlug(sl); if(re){ state.edit=true; ensureEditParam(); state.view='topic'; state.topic=re.topic; startEdit(re.title); return; }
+      // Slugs are derived from titles, so RENAMING a card kills every existing link to
+      // it -- and the staff SharePoint page is full of them. Don't dump the editor on
+      // the home page wondering what happened: say so, and search for the closest match.
+      return deadLink(sl, true); }
     if(m=h.match(/^#\/topic\/([^\/]+)/)){ var t=topicById(safeDecode(m[1])); if(t){ state.editCtx=null; state.view='topic'; state.topic=t.name; render(); return; } }
     if(m=h.match(/^#\/task\/([^\/]+)/)){ var id=safeDecode(m[1]); if(id&&taskById(id)){ state.editCtx=null; state.view='task'; state.task=id; render(); return; } }
-    if(m=h.match(/^#\/res\/([^\/]+)/)){ var r=resBySlug(safeDecode(m[1])); if(r){
+    if(m=h.match(/^#\/res\/([^\/]+)/)){ var rsl=safeDecode(m[1]), r=resBySlug(rsl); if(r){
       if(state.edit){ state.view='topic'; state.topic=r.topic; startEdit(r.title); return; }   // in edit mode, open its form
-      state.view='topic'; state.topic=r.topic; render(); reveal(r.title); return; } }
+      state.view='topic'; state.topic=r.topic; render(); reveal(r.title); return; }
+      return deadLink(rsl, false); }
     if(m=h.match(/^#\/search\/(.+)/)){ var q=safeDecode(m[1]); if(q){ state.editCtx=null; state.q=q; state.view='search'; render(); return; } }
     state.editCtx=null; state.view='home'; state.topic=null; state.task=null; state.q=''; render();
   }
@@ -1173,7 +1223,7 @@
     // After routing (a #/edit deep link may have just enabled edit mode): offer
     // back any changes applied in an earlier visit but never downloaded, and
     // pick up the remembered direct-save handle so the bars show the right buttons.
-    checkRestore(); if(state.restore) render({keepScroll:true});
+    checkRestore(); if(state.restore){ render({keepScroll:true}); dropRestoreIfAlreadyLive(); }
     loadSaveHandle().then(function(){ if(state.edit && saveHandle) render({keepScroll:true}); });
   }
   // Primary source = ctls-data.json (the editable document). If fetch is unavailable
