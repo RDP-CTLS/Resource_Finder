@@ -88,7 +88,7 @@
   .rescard .more{margin-top:.8rem;border-top:1px dashed var(--line);padding-top:.9rem;display:none;}
   .rescard.open .more{display:block;}
   .rescard .expand{display:block;background:none;border:0;color:var(--purple-deep);font-weight:700;font-size:.85rem;cursor:pointer;margin-top:.7rem;padding:0;}
-  .openrow{margin:.25rem 0 .15rem;}
+  .openrow{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;margin:.25rem 0 .15rem;}
   .openres{display:inline-flex;align-items:center;gap:.4rem;background:var(--purple);color:#fff;font-weight:700;font-size:.85rem;text-decoration:none;border-radius:8px;padding:.5rem 1rem;}
   .openres:hover{background:var(--purple-deep);}
   /* Provenance colour system: every info block inside a card is tinted by where
@@ -137,13 +137,19 @@
   .sharebar p{margin:.3rem 0 0;font-size:.93rem;color:var(--ink);}
   .sharebar .perm{color:var(--ink-soft);font-size:.88rem;}
   .sharerow{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;margin-top:.8rem;}
-  .sharebtn{background:#fff;border:1.5px solid var(--line);border-radius:8px;padding:.42rem .9rem;
+  .sharebtn{display:inline-flex;align-items:center;min-height:44px;line-height:1;background:#fff;
+            border:1.5px solid var(--purple);border-radius:8px;padding:.42rem .95rem;
             font-weight:700;font-size:.84rem;color:var(--purple-deep);cursor:pointer;transition:.13s;}
   .sharebtn:hover{border-color:var(--purple);}
   .sharebtn:focus-visible{outline:2px solid var(--purple);outline-offset:2px;}
-  .sharebtn.copied{background:var(--t-lime);border-color:#cfe0ae;color:#4f7a10;}
+  .sharebtn.copied{background:var(--t-lime);border-color:#4f7a10;color:#3f5a0c;}
+  .sharebtn.fellback{display:none;}
+  /* Confirmation is a sibling, not the button's own label: swapping the label changed
+     the accessible name of the focused element out from under a screen reader user. */
+  .copyflash{display:none;font-size:.8rem;font-weight:800;color:#3f5a0c;white-space:nowrap;}
+  .copyflash.on{display:inline;}
   .sharehint{font-size:.82rem;color:var(--ink-soft);}
-  .copyfall{display:flex;flex-direction:column;gap:.3rem;max-width:32rem;}
+  .copyfall{display:flex;flex-direction:column;gap:.3rem;max-width:32rem;flex-basis:100%;}
   .copyfall input{border:1.5px solid var(--purple);border-radius:8px;padding:.42rem .7rem;font:inherit;
                   font-size:.82rem;color:var(--ink);background:#fff;width:100%;}
   .copyfall span{font-size:.78rem;color:var(--ink-soft);}
@@ -423,7 +429,7 @@
     var head = '<button class="back" data-home>'+icon('dot',12)+' All topics</button>'
       +'<div class="topic-head"><div class="eyebrow">Topic</div><h2>'+esc(name)+'</h2>'
       +'<p class="blurb">'+esc(t.blurb||'')+'</p>'
-      +(t.id?'<div class="sharerow">'+copyBtn('#/topic/'+t.id)+'<span class="sharehint">Send this topic to someone</span></div>':'')
+      +(t.id?'<div class="sharerow">'+copyBtn('#/topic/'+t.id, 'the topic \''+name+'\'')+'<span class="sharehint">Send this topic to someone</span></div>':'')
       +'</div>';
     if(t.state!=='active'){
       return sharedStrip('topic')+head+(name==='Indigenizing my teaching'?indigPanel():devPanel(name));
@@ -451,29 +457,40 @@
      job. The old #/res/<slug> route stays FOREVER: every link ever sent, plus the
      staff SharePoint page, still resolves.
 
-     The "shared with you" strip only shows when the link WAS the entry point. The
-     flag is one-shot: the moment the reader navigates anywhere else they are
-     browsing, not arriving, and returning to the very same page later must not
-     re-arm it. (Testing the hash alone is not enough: home -> back to the same task
-     would re-match.) */
+     THE ARRIVAL STRIP IS DRIVEN BY A ?shared MARKER, NOT BY THE HASH. Deducing "someone
+     sent you this" from "the URL has a fragment" is a category error: a bookmark, a
+     refresh (F5 on a page you browsed to yourself), an iOS tab restore and a real shared
+     link are all indistinguishable that way, and the earlier version told anyone who hit
+     reload that CTLS had personally chosen the page for them. It also made every legacy
+     #/res/ link -- the ones on the staff SharePoint page and in every inbox -- announce
+     itself as a TOPIC with the wrong resource count.
+     So the LINK declares itself: Copy link emits ...?shared#/... . A URL can only carry
+     that marker if it came out of the share button, which is exactly the fact we want.
+     What we still cannot know is WHO sent it (the URL carries no sender, by design -- no
+     personal data in a URL), and a recipient can forward it on. So the copy says
+     "Someone shared this with you", never "CTLS chose this for you". */
   var entryHash = location.hash||'';
-  var arrivedByLink = /^#\/(task|topic|r|res)\//.test(entryHash);
+  var arrivedByLink = /[?&]shared\b/i.test(location.search||'');
   window.addEventListener('hashchange', function(){
     if(arrivedByLink && location.hash !== entryHash) arrivedByLink = false;
   });
 
-  function shareUrl(hash){ return location.origin+location.pathname+hash; }
+  // location.origin is the string "null" over file://, which would emit "null/Users/...".
+  // Strip the query and hash off the real href instead, then re-add ours.
+  function shareUrl(hash){ return location.href.split('#')[0].split('?')[0]+'?shared'+hash; }
 
   // kind: 'task' | 'topic' | 'res'. One component, three arrivals, one sentence apart.
+  // Says only what is verifiable: a link was shared, and here is what it points at.
+  // Never names a sender -- the URL carries none, and the link can be forwarded on.
   function sharedStrip(kind, count){
     if(!arrivedByLink) return '';
     var line;
-    if(kind==='res')        line = 'Someone at CTLS chose this one resource for you. It is open below.';
-    else if(kind==='topic') line = 'Someone at CTLS sent you this topic'+(count?', and the '+count+' resources in it':'')+'.';
-    else                    line = 'Someone at CTLS sent you this path.'+(count>1?' The '+count+' resources below are in the order they suggest working through them.':'');
+    if(kind==='res')        line = 'Someone shared this one resource with you. It is open below.';
+    else if(kind==='topic') line = 'Someone shared this topic with you'+(count?', and the '+count+' resource'+(count===1?'':'s')+' in it':'')+'.';
+    else                    line = 'Someone shared this path with you.'+(count>1?' The '+count+' resources below are in the order they suggest working through them.':'');
+    var perm = (kind==='res') ? '<p class="perm">The rest of the library is below if you want it.</p>' : '';
     return '<div class="sharebar"><div class="eyebrow">Shared with you</div>'
-      +'<p>'+line+'</p>'
-      +'<p class="perm">You do not have to read anything else.</p></div>';
+      +'<p>'+line+'</p>'+perm+'</div>';
   }
 
   // Sum of readTime across a task's steps. Six PDFs sounds like a weekend; "about
@@ -485,31 +502,60 @@
     return '<p class="totaltime">'+n+' resource'+(n===1?'':'s')+(mins?', about '+mins+' minutes of reading in all':'')+'.</p>';
   }
 
-  function copyBtn(hash){
-    return '<button class="sharebtn" type="button" data-copy="'+esc(hash)+'">Copy link</button>';
+  /* A page can carry up to 17 of these. Without an aria-label a screen reader user
+     hears "Copy link, button" 17 times with no way to tell them apart, and voice
+     control ("click Copy link") is ambiguous. So the accessible name always names the
+     target, while the visible text stays the short "Copy link". The visible string is
+     contained in the accessible name, which is what WCAG 2.5.3 Label in Name requires. */
+  function copyBtn(hash, what){
+    return '<button class="sharebtn" type="button" data-copy="'+esc(hash)+'"'
+      + ' aria-label="Copy link to '+esc(what||'this page')+'">Copy link</button>'
+      + '<span class="copyflash" aria-hidden="true">Link copied</span>';
   }
 
-  // Clipboard must be written synchronously inside the click handler with nothing
-  // awaited first, or iOS Safari discards the user gesture and the write fails.
+  /* Clipboard must be written synchronously inside the click handler with nothing
+     awaited first, or iOS Safari discards the user gesture and the write fails.
+     The button's TEXT never changes. Swapping it to "Link copied" changed the
+     accessible name of the focused element under the user (re-announcing, then
+     silently changing back 2.2s later), and because the old code read the label back
+     out of the DOM to restore it, a second click inside the window captured "Link
+     copied" as the label to restore, leaving the button stuck reading "Link copied"
+     forever. Confirmation is a sibling flash element plus the live region instead. */
   function copyLink(hash, btn){
     var url = shareUrl(hash);
+    var flash = btn.nextElementSibling &&
+                btn.nextElementSibling.classList.contains('copyflash') ? btn.nextElementSibling : null;
+    var what = (btn.getAttribute('aria-label')||'').replace(/^Copy link to\s*/,'') || 'this page';
     var done = function(){
-      var old = btn.textContent;
-      btn.textContent = 'Link copied';
       btn.classList.add('copied');
-      setTimeout(function(){ btn.textContent = old; btn.classList.remove('copied'); }, 2200);
-      if(live) live.textContent = 'Link copied. Paste it wherever you like.';
+      if(flash) flash.classList.add('on');
+      clearTimeout(btn._copyT);
+      btn._copyT = setTimeout(function(){
+        btn.classList.remove('copied'); if(flash) flash.classList.remove('on');
+      }, 2200);
+      // Cleared first: some screen readers suppress an identical consecutive polite
+      // announcement, so a second copy would be silent.
+      if(live){ live.textContent=''; setTimeout(function(){
+        live.textContent = 'Copied the link to '+what+'. It opens the Resource Finder, not the PDF file.'; }, 60); }
     };
     var manual = function(){
-      // No clipboard API (older Safari, or a locked-down campus browser): show the
-      // link, selected, and let them copy it themselves. Never fail into nothing.
+      // No clipboard API, or the write was refused (Safari and Firefox reject when the
+      // document is not focused, so this is reachable in normal use, not just on old
+      // browsers). Show the link, selected, and let them copy it themselves.
+      // Non-destructive: the button is hidden, never removed, so a transient refusal
+      // cannot permanently downgrade a working button into a text box.
+      if(!btn.parentNode || btn.classList.contains('fellback')) return;   // guard re-entry
+      btn.classList.add('fellback');
       var box = document.createElement('div');
       box.className = 'copyfall';
-      box.innerHTML = '<input type="text" readonly value="'+esc(url)+'" aria-label="Link to copy">'
-        +'<span>Press Ctrl+C (Cmd+C on a Mac) to copy the link.</span>';
-      btn.parentNode.replaceChild(box, btn);
-      var inp = box.querySelector('input'); inp.focus(); inp.select();
-      if(live) live.textContent = 'Copying is blocked in this browser. The link is shown, selected, ready to copy.';
+      box.innerHTML = '<input type="text" readonly value="'+esc(url)+'" aria-label="Link to '+esc(what)+', ready to copy">'
+        // Device-neutral: this path is disproportionately mobile, where there is no Ctrl and no Cmd.
+        +'<span>Copy the link above. On a computer press Ctrl+C, or Cmd+C on a Mac. On a phone, touch and hold it, then choose Copy.</span>';
+      btn.parentNode.insertBefore(box, btn.nextSibling);
+      var inp = box.querySelector('input');
+      inp.focus(); inp.select();
+      if(inp.setSelectionRange) inp.setSelectionRange(0, inp.value.length);  // select() alone is unreliable on iOS
+      if(live) live.textContent = 'This browser would not let the page copy for you. The link is shown and selected, ready to copy.';
     };
     try {
       if(navigator.clipboard && navigator.clipboard.writeText){
@@ -528,7 +574,7 @@
     var head = '<button class="back" data-home>'+icon('dot',12)+' All topics</button>'
       +'<div class="topic-head"><div class="eyebrow">I&#39;m trying to</div><h2>'+esc(t.label)+'</h2>'
       +'<p class="blurb">'+esc(t.intro||'')+'</p>'
-      +'<div class="sharerow">'+copyBtn('#/task/'+t.id)+'<span class="sharehint">Send this path to someone</span></div></div>';
+      +'<div class="sharerow">'+copyBtn('#/task/'+t.id, 'the path \''+t.label+'\'')+'<span class="sharehint">Send this path to someone</span></div></div>';
     var steps = (t.steps||[]).map(function(st){
       var rr = byTitle(st.res);
       var pdf = (rr && safeUrl(rr.url)) ? ' <a class="mini-pdf" href="'+esc(safeUrl(rr.url))+'" target="_blank" rel="noopener" aria-label="Open '+esc(st.res)+' as a PDF, in a new tab">PDF &#8599;</a>' : '';
@@ -558,7 +604,8 @@
       +(tp&&tp.id?'<button class="obtn" data-topic-id="'+esc(tp.id)+'">See all of '+esc(r.topic)+'</button>':'')
       +'<button class="obtn" data-home>Browse every topic</button>'
       +'</div></div>';
-    return sharedStrip('res')+resCard(r, 0, true)+provKey()+onward;
+    var back = '<button class="back" data-home>'+icon('dot',12)+' All topics</button>';
+    return sharedStrip('res')+back+resCard(r, 0, true)+provKey()+onward;
   }
 
   function devPanel(name){
@@ -624,7 +671,7 @@
     // no URL still needs somewhere to hang its Copy link. Copy link is gated on r.id --
     // never mint a share link for a resource that has no stable id to point at.
     var pdfBtn = rUrl ? '<a class="openres" href="'+esc(rUrl)+'" target="_blank" rel="noopener"'+(r.status==='refreshing'?' title="Original version - a refreshed edition is on the way"':'')+'>Open the resource (PDF) &#8599;</a>' : '';
-    var openLink = (pdfBtn || r.id) ? '<div class="openrow">'+pdfBtn+(r.id?copyBtn('#/r/'+r.id):'')+'</div>' : '';
+    var openLink = (pdfBtn || r.id) ? '<div class="openrow">'+pdfBtn+(r.id?copyBtn('#/r/'+r.id, r.title):'')+'</div>' : '';
     // Situational scent, visible without expanding (CTLS-written, hence the green label).
     var when = (r.useWhen&&r.useWhen.length)?'<p class="usewhen"><span class="uw">Use this when</span>'+r.useWhen.map(esc).join(' &middot; ')+'</p>':'';
     // Page anchors: a mini table of contents INTO the PDF (#page=N works because the
@@ -1187,7 +1234,7 @@
     var q=document.getElementById('q'); if(q && q.value!==state.q && document.activeElement!==q){ q.value=state.q; }
     var ai=document.getElementById('aichk'); if(ai){ ai.addEventListener('change',function(){ state.ai=ai.checked; var L=document.getElementById('live'); if(L) L.textContent=state.ai?'AI lens on. Open a topic to see where AI fits in each resource.':'AI lens off.'; paintResults(); }); }
     var ig=document.getElementById('indigchk'); if(ig){ ig.addEventListener('change',function(){ state.indig=ig.checked; var L=document.getElementById('live'); if(L) L.textContent=state.indig?'Indigenization lens on. Open a topic to see where it fits in each resource.':'Indigenization lens off.'; paintResults(); }); }
-    var tt = state.view==='topic'&&state.topic ? state.topic+' | ' : state.view==='task'&&taskById(state.task) ? taskById(state.task).label+' | ' : '';
+    var tt = state.view==='topic'&&state.topic ? state.topic+' | ' : state.view==='task'&&taskById(state.task) ? taskById(state.task).label+' | ' : state.view==='res'&&state.res ? state.res+' | ' : '';
     document.title = tt+'Resource Finder | CTLS';
     if(!(opt&&opt.keepScroll)) window.scrollTo(0,0);
   }
@@ -1401,6 +1448,7 @@
     // In the form, Escape means "cancel this edit" (with a discard check), never "go home".
     if(e.key==='Escape' && state.editCtx){ if(confirmDiscard()) cancelEdit(); return; }
     if(e.key==='Escape'){ var qq=document.getElementById('q'); if(qq&&qq.value){ qq.value=''; state.q=''; }
+      if(document.activeElement && document.activeElement.closest && document.activeElement.closest('.copyfall')) return;
       if(state.view!=='home'){ nav('#/'); } }
     if(e.key==='/' && !state.editCtx && document.activeElement.tagName!=='INPUT' && document.activeElement.tagName!=='TEXTAREA'){ var q=document.getElementById('q'); if(q){e.preventDefault();q.focus();} }
   });
