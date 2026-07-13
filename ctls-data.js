@@ -25,7 +25,7 @@ window.CTLS = {
    "blurb": "I'm building or revising a course, help me write learning outcomes that are actually measurable and design for all my students from the start.",
    "state": "active",
    "startHere": [
-    "A Process for Getting Started: Universal Design for Learning (UDL)",
+    "A Process for Getting Started: Universal Design for Learning (UDL) - Janet Test",
     "Bloom's Taxonomy Affective Domain",
     "Bloom's Taxonomy Cognitive Domain"
    ],
@@ -115,7 +115,7 @@ window.CTLS = {
   {
    "id": "udl-start",
    "audience": "all",
-   "title": "A Process for Getting Started: Universal Design for Learning (UDL)",
+   "title": "A Process for Getting Started: Universal Design for Learning (UDL) - Janet Test",
    "topic": "Designing my course",
    "oneLine": "A one-page RDP infographic laying out a six-step reflective cycle for instructors to start applying Universal Design for Learning in their teaching.",
    "url": "https://rdpolytech.ca/media/4846/download?inline",
@@ -239,7 +239,7 @@ window.CTLS = {
     "Bloom's Taxonomy Cognitive Domain",
     "Bloom's Taxonomy Psychomotor Domain",
     "Bloom's Taxonomy Affective Domain",
-    "A Process for Getting Started: Universal Design for Learning (UDL)"
+    "A Process for Getting Started: Universal Design for Learning (UDL) - Janet Test"
    ],
    "concepts": [
     "Authentic assessment as real-world, discipline-specific performance tasks vs. traditional exams",
@@ -702,7 +702,7 @@ window.CTLS = {
    "poly": "The applied/industry angle attaches at criterion design: RDP's hands-on, competency-based programs (trades, health, technology) lend themselves to observable, measurable performance criteria, and the note about reducing rubric dependency in upper-year discipline courses speaks directly to scaffolding learners toward professional-judgement standards used in industry.",
    "ai": "Generative AI could draft rubric criteria and level descriptors from a learning outcome and assignment brief, suggest observable/measurable wording to replace subjective language, and help convert between analytical, single-point, and holistic formats, extending the resource's existing nod to rubric generators (iRubric, RubiStar, 'Rubric Wordsmith').",
    "related": [
-    "A Process for Getting Started: Universal Design for Learning (UDL)",
+    "A Process for Getting Started: Universal Design for Learning (UDL) - Janet Test",
     "Alignment Between Assessments and Outcomes",
     "Authentic Assessment: Purposes and Rationale",
     "Bloom's Taxonomy Cognitive Domain"
@@ -839,7 +839,7 @@ window.CTLS = {
    "ai": "-",
    "related": [
     "Trauma Responsive Online and LMS Course Design and Teaching",
-    "A Process for Getting Started: Universal Design for Learning (UDL)",
+    "A Process for Getting Started: Universal Design for Learning (UDL) - Janet Test",
     "Authentic Assessment: Purposes and Rationale",
     "New to Online Teaching? The CTLS is Here to Help"
    ],
@@ -912,7 +912,7 @@ window.CTLS = {
     "Trauma Informed Pedagogy",
     "New to Online Teaching? The CTLS is Here to Help",
     "What Nobody Tells You About Designing Effective Breakout Room Activities in Blackboard Collaborate Ultra",
-    "A Process for Getting Started: Universal Design for Learning (UDL)"
+    "A Process for Getting Started: Universal Design for Learning (UDL) - Janet Test"
    ],
    "concepts": [
     "Trauma-responsive / trauma-informed course design (the 'trauma lens')",
@@ -973,7 +973,7 @@ window.CTLS = {
    "ai": "-",
    "related": [
     "Teaching Philosophy",
-    "A Process for Getting Started: Universal Design for Learning (UDL)",
+    "A Process for Getting Started: Universal Design for Learning (UDL) - Janet Test",
     "New to Online Teaching? The CTLS is Here to Help",
     "Trauma Informed Pedagogy"
    ],
@@ -1141,7 +1141,7 @@ window.CTLS = {
      "note": "work the before-the-course checklist for your delivery mode"
     },
     {
-     "res": "A Process for Getting Started: Universal Design for Learning (UDL)",
+     "res": "A Process for Getting Started: Universal Design for Learning (UDL) - Janet Test",
      "note": "build the flexibility in before students arrive, not after someone struggles"
     },
     {
@@ -1164,7 +1164,7 @@ window.CTLS = {
      "note": "the online and LMS version"
     },
     {
-     "res": "A Process for Getting Started: Universal Design for Learning (UDL)",
+     "res": "A Process for Getting Started: Universal Design for Learning (UDL) - Janet Test",
      "note": "design the flexibility in, so fewer students have to ask for it"
     }
    ]
@@ -1194,7 +1194,7 @@ window.CTLS = {
    "intro": "The order to do it in: the design lens, then the outcome, then the thing you mark it with.",
    "steps": [
     {
-     "res": "A Process for Getting Started: Universal Design for Learning (UDL)",
+     "res": "A Process for Getting Started: Universal Design for Learning (UDL) - Janet Test",
      "note": "design for the whole class before you design for the average one"
     },
     {
@@ -1225,7 +1225,7 @@ window.CTLS = {
      "note": "the vocabulary everything else here takes for granted"
     },
     {
-     "res": "A Process for Getting Started: Universal Design for Learning (UDL)",
+     "res": "A Process for Getting Started: Universal Design for Learning (UDL) - Janet Test",
      "note": "a six-step cycle you can start applying to one lesson this week"
     },
     {
@@ -1240,7 +1240,7 @@ window.CTLS = {
    "intro": "Accessibility and trauma-informed practice built in at the design stage, rather than retrofitted when someone is already struggling.",
    "steps": [
     {
-     "res": "A Process for Getting Started: Universal Design for Learning (UDL)",
+     "res": "A Process for Getting Started: Universal Design for Learning (UDL) - Janet Test",
      "note": "build the flexibility in up front"
     },
     {
@@ -2207,12 +2207,12 @@ window.CTLS = {
   },
   {
    "from": "What is Pedagogy?",
-   "to": "A Process for Getting Started: Universal Design for Learning (UDL)",
+   "to": "A Process for Getting Started: Universal Design for Learning (UDL) - Janet Test",
    "rel": "prerequisite-of, names UDL as a pedagogy lens that the UDL cycle then operationalizes"
   },
   {
    "from": "Trauma Informed Pedagogy",
-   "to": "A Process for Getting Started: Universal Design for Learning (UDL)",
+   "to": "A Process for Getting Started: Universal Design for Learning (UDL) - Janet Test",
    "rel": "overlaps-with, trauma-informed practices explicitly draw on the UDL framework"
   },
   {
@@ -2226,7 +2226,7 @@ window.CTLS = {
    "rel": "pairs-with, trauma-informed teaching favours authentic/alternative tasks over high-stakes exams"
   },
   {
-   "from": "A Process for Getting Started: Universal Design for Learning (UDL)",
+   "from": "A Process for Getting Started: Universal Design for Learning (UDL) - Janet Test",
    "to": "Alignment Between Assessments and Outcomes",
    "rel": "pairs-with, the UDL investigate/teach steps lean on outcome-assessment alignment"
   },
