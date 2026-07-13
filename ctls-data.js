@@ -51,7 +51,6 @@ window.CTLS = {
    "blurb": "practical ways to get students doing, talking, and collaborating in class, and to keep stressed learners able to engage at all.",
    "state": "active",
    "startHere": [
-    "What Nobody Tells You About Designing Effective Breakout Room Activities in Blackboard Collaborate Ultra",
     "Trauma Informed Pedagogy"
    ],
    "icon": "spark",
@@ -63,9 +62,8 @@ window.CTLS = {
    "blurb": "how to show up as a real, reachable instructor in an LMS-mediated course, setting up the shell, communicating consistently, and sustaining connection (including with students under stress) across Online/Blended/HyFlex/Onsite delivery.",
    "state": "active",
    "startHere": [
-    "New to Online Teaching? The CTLS is Here to Help",
-    "Trauma Responsive Online and LMS Course Design and Teaching",
-    "Delivering Planning Checklist"
+    "Delivering Planning Checklist",
+    "Trauma Responsive Online and LMS Course Design and Teaching"
    ],
    "icon": "signal",
    "resourceCount": 4
@@ -1136,19 +1134,19 @@ window.CTLS = {
   {
    "id": "setup-online",
    "label": "Set up my online course",
-   "intro": "A checklist to work through, help to call on, and a shell students can navigate.",
+   "intro": "Plan it, then structure it so students can find their way around. For step-by-step help with Brightspace itself, email CTLS@rdpolytech.ca.",
    "steps": [
     {
      "res": "Delivering Planning Checklist",
-     "note": "work the before-the-course checklist"
+     "note": "work the before-the-course checklist for your delivery mode"
     },
     {
-     "res": "New to Online Teaching? The CTLS is Here to Help",
-     "note": "see what support you can book"
+     "res": "A Process for Getting Started: Universal Design for Learning (UDL)",
+     "note": "build the flexibility in before students arrive, not after someone struggles"
     },
     {
      "res": "Trauma Responsive Online and LMS Course Design and Teaching",
-     "note": "organize the shell so it is easy to navigate"
+     "note": "make the structure predictable, so finding things is never the hard part"
     }
    ]
   },
@@ -1166,8 +1164,8 @@ window.CTLS = {
      "note": "the online and LMS version"
     },
     {
-     "res": "Strong Start - Self-Enroll Instructions",
-     "note": "a self-enrol course to point students to"
+     "res": "A Process for Getting Started: Universal Design for Learning (UDL)",
+     "note": "design the flexibility in, so fewer students have to ask for it"
     }
    ]
   },
