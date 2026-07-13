@@ -1,13 +1,19 @@
-// Resource Finder catalogue data. Everything the app renders lives in this file;
-// see README.md ("Adapt it for your institution") for the shape of each section.
-// Generated 2026-06-26 from a full read of the source PDFs; edited since.
+// Resource Finder catalogue data, for offline and file:// use.
+//
+// GENERATED FILE - DO NOT EDIT BY HAND. Your change would be overwritten, and worse,
+// it would not reach the live site: the app reads ctls-data.json, and only falls back
+// to this copy when that fetch fails. Edit ctls-data.json instead, or use the editor.
+//
+// Regenerated from ctls-data.json by .github/scripts/make_fallback.py, which the merge
+// bot runs whenever it publishes a save, so this cannot drift from the catalogue.
+// Carries no _meta: a fallback must never look like a published revision.
 window.CTLS = {
  "meta": {
   "generated": "2026-06-26",
   "counts": {
    "resources": 17,
    "glossary": 121,
-   "edges": 27
+   "edges": 18
   },
   "researchAdded": "2026-07-02",
   "researchNote": "Facts in each resource's 'research' list were added from published outside sources on 2026-07-02; every fact carries its citation URL and was checked against the live source before inclusion."
@@ -32,7 +38,7 @@ window.CTLS = {
    "blurb": "How do I design assessments that match my outcomes, resist AI shortcuts, and grade them fairly and consistently?",
    "state": "active",
    "startHere": [
-    "Alignment Between Assessments & Outcomes",
+    "Alignment Between Assessments and Outcomes",
     "Authentic Assessment: Purposes and Rationale",
     "Rubrics: Purposes and Rationale"
    ],
@@ -109,25 +115,15 @@ window.CTLS = {
  ],
  "resources": [
   {
+   "id": "udl-start",
+   "audience": "all",
    "title": "A Process for Getting Started: Universal Design for Learning (UDL)",
    "topic": "Designing my course",
-   "status": "refreshing",
    "oneLine": "A one-page RDP infographic laying out a six-step reflective cycle for instructors to start applying Universal Design for Learning in their teaching.",
-   "useWhen": [
-    "planning a new course with accessibility in mind from day one",
-    "rethinking a lesson that keeps losing part of the class"
-   ],
+   "url": "https://rdpolytech.ca/media/4846/download?inline",
    "readTime": 2,
    "format": "how-to",
-   "audience": "all",
-   "poly": "The \"Teach a lesson... what does this look like in my teaching environment?\" and reassess-by-demonstrated-skills steps map naturally onto RDP's applied, hands-on classrooms, labs, and shops, instructors can pilot a UDL checkpoint in a practical/skills demonstration and judge it by whether students performed the competency, not just recalled content.",
-   "ai": "Not addressed in the resource. A light tie-in: instructors could use AI to brainstorm UDL-aligned methods at the \"Investigate\" step (e.g., generating alternative ways to present material or let students demonstrate skills), keeping the RDP Faculty AI Framework's verification expectations in mind.",
-   "related": [
-    "Alignment Between Assessments & Outcomes",
-    "Delivering Planning Checklist",
-    "Trauma Responsive Online and LMS Course Design and Teaching",
-    "What is Pedagogy?"
-   ],
+   "status": "refreshing",
    "concepts": [
     "Universal Design for Learning (UDL) as a course-design lens",
     "A six-step iterative improvement cycle (Reflect, Identify, Investigate, Teach, Reassess, Reflect)",
@@ -135,7 +131,18 @@ window.CTLS = {
     "Reflective, question-driven teaching practice",
     "Linking a chosen checkpoint to observed student needs and outcomes"
    ],
-   "url": "https://rdpolytech.ca/media/4846/download?inline",
+   "useWhen": [
+    "planning a new course with accessibility in mind from day one",
+    "rethinking a lesson that keeps losing part of the class"
+   ],
+   "poly": "The \"Teach a lesson... what does this look like in my teaching environment?\" and reassess-by-demonstrated-skills steps map naturally onto RDP's applied, hands-on classrooms, labs, and shops, instructors can pilot a UDL checkpoint in a practical/skills demonstration and judge it by whether students performed the competency, not just recalled content.",
+   "ai": "Not addressed in the resource. A light tie-in: instructors could use AI to brainstorm UDL-aligned methods at the \"Investigate\" step (e.g., generating alternative ways to present material or let students demonstrate skills), keeping the RDP Faculty AI Framework's verification expectations in mind.",
+   "related": [
+    "Alignment Between Assessments and Outcomes",
+    "Delivering Planning Checklist",
+    "Trauma Responsive Online and LMS Course Design and Teaching",
+    "What is Pedagogy?"
+   ],
    "research": [
     {
      "fact": "CAST released UDL Guidelines 3.0 in July 2024. The update names 'learner agency' as UDL's goal and adds emphasis on learners' identities, belonging, and addressing barriers rooted in biases and systems of exclusion.",
@@ -160,26 +167,15 @@ window.CTLS = {
    ]
   },
   {
-   "title": "Alignment Between Assessments & Outcomes",
+   "id": "alignment",
+   "title": "Alignment Between Assessments and Outcomes",
    "topic": "Assessment & grading",
-   "status": "refreshing",
    "oneLine": "A one-page reference chart that pairs each of Bloom's six cognitive levels with example assessments and learning activities suited to that level, so instructors can align what they assess with their stated outcomes.",
-   "useWhen": [
-    "checking that a test actually measures your stated outcomes",
-    "matching assessment types to Bloom levels while planning a unit"
-   ],
+   "url": "https://rdpolytech.ca/media/5121/download?inline",
    "readTime": 3,
    "format": "reference",
    "audience": "all",
-   "poly": "The Applying and Creating rows already lean applied (prototyping, simulation, performance, lab work), a perfect place to attach RDP's hands-on/industry framing by swapping generic examples for trade/program-authentic tasks (e.g., a shop fabrication, a clinical sim, a client-brief project) so alignment is shown with real polytechnic deliverables.",
-   "ai": "This chart is a natural hook for assessment redesign in the GenAI era: which lower-order tasks (recall quizzes, summaries) are now easily produced by AI and pushing toward higher-order Create/Evaluate tasks that demand human judgement, plus noting where AI can be a legitimate tool within an activity. Ties to the Faculty AI Framework / Module 0.",
-   "related": [
-    "Bloom's Taxonomy Cognitive Domain",
-    "Bloom's Taxonomy Affective Domain",
-    "Bloom's Taxonomy Psychomotor Domain",
-    "Authentic Assessment: Purposes and Rationale",
-    "Rubrics: Purposes and Rationale"
-   ],
+   "status": "refreshing",
    "concepts": [
     "Constructive alignment between outcomes and assessments",
     "Bloom's six cognitive levels (Remembering to Creating)",
@@ -188,7 +184,19 @@ window.CTLS = {
     "Higher-order levels call for creation/judgement tasks, not recall tests",
     "Source adapted from Carnegie Mellon University"
    ],
-   "url": "https://rdpolytech.ca/media/5121/download?inline",
+   "useWhen": [
+    "checking that a test actually measures your stated outcomes",
+    "matching assessment types to Bloom levels while planning a unit"
+   ],
+   "poly": "The Applying and Creating rows already lean applied (prototyping, simulation, performance, lab work), a perfect place to attach RDP's hands-on/industry framing by swapping generic examples for trade/program-authentic tasks (e.g., a shop fabrication, a clinical sim, a client-brief project) so alignment is shown with real polytechnic deliverables.",
+   "ai": "This chart is a natural hook for assessment redesign in the GenAI era: which lower-order tasks (recall quizzes, summaries) are now easily produced by AI and pushing toward higher-order Create/Evaluate tasks that demand human judgement, plus noting where AI can be a legitimate tool within an activity. Ties to the Faculty AI Framework / Module 0.",
+   "related": [
+    "Authentic Assessment: Purposes and Rationale",
+    "Bloom's Taxonomy Affective Domain",
+    "Bloom's Taxonomy Cognitive Domain",
+    "Bloom's Taxonomy Psychomotor Domain",
+    "Rubrics: Purposes and Rationale"
+   ],
    "research": [
     {
      "fact": "John Biggs coined the term \"constructive alignment\" in a 1996 Higher Education article (vol. 32, pp. 347-364), arguing that outcomes, teaching activities, and assessment should all target the same student performances. The publisher's page shows over 2,800 citations.",
@@ -213,6 +221,7 @@ window.CTLS = {
    ]
   },
   {
+   "id": "authentic-assessment",
    "title": "Authentic Assessment: Purposes and Rationale",
    "topic": "Assessment & grading",
    "status": "refreshing",
@@ -227,7 +236,7 @@ window.CTLS = {
    "poly": "Strong natural fit: the resource's core argument is preparing students for their 'professional context after school' through discipline-specific, real-world tasks, working with local organizations and businesses. RDP's applied/hands-on/industry framing attaches directly to the 'What is the Real World?' section and the discipline examples table (Nursing care plans, Business marketing plans, CS app builds) which can be reframed around RDP's program-to-industry pathways, work-integrated learning, and employer partnerships.",
    "ai": "Central and explicit: a dedicated 'Authentic Assessments and Artificial Intelligence' section argues authentic assessment is AI-resilient because real-world tasks (building prototypes, collaboration, complex problem-solving) cannot be completed by AI alone, while preparing students to work alongside AI. It points readers to the RDP CTLS SharePoint page on the topic. Ties to the Faculty AI Framework / Module 0. Note: one source is an uncited ChatGPT response (OpenAI, 2023), which the upcoming refresh will address.",
    "related": [
-    "Alignment Between Assessments & Outcomes",
+    "Alignment Between Assessments and Outcomes",
     "Rubrics: Purposes and Rationale",
     "Bloom's Taxonomy Cognitive Domain",
     "Bloom's Taxonomy Psychomotor Domain",
@@ -278,6 +287,7 @@ window.CTLS = {
    ]
   },
   {
+   "id": "blooms-affective",
    "title": "Bloom's Taxonomy Affective Domain",
    "topic": "Designing my course",
    "status": "refreshing",
@@ -294,7 +304,7 @@ window.CTLS = {
    "related": [
     "Bloom's Taxonomy Cognitive Domain",
     "Bloom's Taxonomy Psychomotor Domain",
-    "Alignment Between Assessments & Outcomes",
+    "Alignment Between Assessments and Outcomes",
     "Authentic Assessment: Purposes and Rationale"
    ],
    "concepts": [
@@ -330,6 +340,7 @@ window.CTLS = {
    ]
   },
   {
+   "id": "blooms-cognitive",
    "title": "Bloom's Taxonomy Cognitive Domain",
    "topic": "Designing my course",
    "status": "refreshing",
@@ -346,7 +357,7 @@ window.CTLS = {
    "related": [
     "Bloom's Taxonomy Affective Domain",
     "Bloom's Taxonomy Psychomotor Domain",
-    "Alignment Between Assessments & Outcomes",
+    "Alignment Between Assessments and Outcomes",
     "Authentic Assessment: Purposes and Rationale"
    ],
    "concepts": [
@@ -381,6 +392,7 @@ window.CTLS = {
    ]
   },
   {
+   "id": "blooms-psychomotor",
    "title": "Bloom's Taxonomy Psychomotor Domain",
    "topic": "Designing my course",
    "status": "refreshing",
@@ -397,7 +409,7 @@ window.CTLS = {
    "related": [
     "Bloom's Taxonomy Cognitive Domain",
     "Bloom's Taxonomy Affective Domain",
-    "Alignment Between Assessments & Outcomes",
+    "Alignment Between Assessments and Outcomes",
     "Authentic Assessment: Purposes and Rationale",
     "Rubrics: Purposes and Rationale"
    ],
@@ -434,6 +446,7 @@ window.CTLS = {
    ]
   },
   {
+   "id": "eportfolio-why",
    "title": "Continuous Appointment ePortfolios at RDP: Rationale and How-Tos",
    "topic": "My feedback & growth",
    "status": "refreshing",
@@ -495,6 +508,7 @@ window.CTLS = {
    ]
   },
   {
+   "id": "eportfolio-how",
    "title": "Creating your Continuous Appointment ePortfolio with CTLS's Google Sites Template: Step-by-Step Guide",
    "topic": "My feedback & growth",
    "status": "refreshing",
@@ -538,6 +552,7 @@ window.CTLS = {
    ]
   },
   {
+   "id": "delivery-checklist",
    "title": "Delivering Planning Checklist",
    "topic": "Presence, online & tech",
    "status": "refreshing",
@@ -554,7 +569,7 @@ window.CTLS = {
    "related": [
     "New to Online Teaching? The CTLS is Here to Help",
     "Strong Start - Self-Enroll Instructions",
-    "Alignment Between Assessments & Outcomes"
+    "Alignment Between Assessments and Outcomes"
    ],
    "concepts": [
     "Course delivery lifecycle (before / first week / throughout / last week)",
@@ -601,6 +616,7 @@ window.CTLS = {
    ]
   },
   {
+   "id": "new-to-online",
    "title": "New to Online Teaching? The CTLS is Here to Help",
    "topic": "Presence, online & tech",
    "status": "refreshing",
@@ -649,26 +665,15 @@ window.CTLS = {
    ]
   },
   {
+   "id": "rubrics",
    "title": "Rubrics: Purposes and Rationale",
    "topic": "Assessment & grading",
-   "status": "refreshing",
    "oneLine": "A CTLS tip-sheet explaining what rubrics are, the three main rubric types, design strategies, and step-by-step Blackboard how-tos for building and grading with rubrics.",
-   "useWhen": [
-    "building your first rubric for an assignment",
-    "cutting grading time on a written assessment",
-    "explaining grades that students keep disputing"
-   ],
-   "readTime": 7,
+   "url": "https://rdpolytech.ca/media/5066/download?inline",
+   "readTime": 6,
    "format": "how-to",
    "audience": "all",
-   "poly": "The applied/industry angle attaches at criterion design: RDP's hands-on, competency-based programs (trades, health, technology) lend themselves to observable, measurable performance criteria, and the note about reducing rubric dependency in upper-year discipline courses speaks directly to scaffolding learners toward professional-judgement standards used in industry.",
-   "ai": "Generative AI could draft rubric criteria and level descriptors from a learning outcome and assignment brief, suggest observable/measurable wording to replace subjective language, and help convert between analytical, single-point, and holistic formats, extending the resource's existing nod to rubric generators (iRubric, RubiStar, 'Rubric Wordsmith').",
-   "related": [
-    "Alignment Between Assessments & Outcomes",
-    "Authentic Assessment: Purposes and Rationale",
-    "Bloom's Taxonomy Cognitive Domain",
-    "A Process for Getting Started: Universal Design for Learning (UDL)"
-   ],
+   "status": "refreshing",
    "concepts": [
     "Rubrics specify assessment criteria and levels of achievement to standardize grading and feedback",
     "Three rubric types: analytical (grid), single-point (strengths/improvement around a meets-expectations column), and holistic (overall snapshot)",
@@ -677,7 +682,6 @@ window.CTLS = {
     "Rubric scoring options: No Points, Points, Point Range, Percent (criteria must total 100%)",
     "Rubrics aren't always the right fit; sometimes transitioning away (reducing dependency) is appropriate"
    ],
-   "url": "https://rdpolytech.ca/media/5066/download?inline",
    "anchors": [
     {
      "label": "Is a rubric always a good fit?",
@@ -691,6 +695,19 @@ window.CTLS = {
      "label": "Attach a rubric to an assessment",
      "page": 4
     }
+   ],
+   "useWhen": [
+    "building your first rubric for an assignment",
+    "cutting grading time on a written assessment",
+    "explaining grades that students keep disputing"
+   ],
+   "poly": "The applied/industry angle attaches at criterion design: RDP's hands-on, competency-based programs (trades, health, technology) lend themselves to observable, measurable performance criteria, and the note about reducing rubric dependency in upper-year discipline courses speaks directly to scaffolding learners toward professional-judgement standards used in industry.",
+   "ai": "Generative AI could draft rubric criteria and level descriptors from a learning outcome and assignment brief, suggest observable/measurable wording to replace subjective language, and help convert between analytical, single-point, and holistic formats, extending the resource's existing nod to rubric generators (iRubric, RubiStar, 'Rubric Wordsmith').",
+   "related": [
+    "A Process for Getting Started: Universal Design for Learning (UDL)",
+    "Alignment Between Assessments and Outcomes",
+    "Authentic Assessment: Purposes and Rationale",
+    "Bloom's Taxonomy Cognitive Domain"
    ],
    "research": [
     {
@@ -716,6 +733,7 @@ window.CTLS = {
    ]
   },
   {
+   "id": "strong-start",
    "title": "Strong Start - Self-Enroll Instructions",
    "topic": "Presence, online & tech",
    "status": "moved",
@@ -742,6 +760,7 @@ window.CTLS = {
    "url": "https://rdpolytech.ca/media/5061/download?inline"
   },
   {
+   "id": "teaching-philosophy",
    "title": "Teaching Philosophy",
    "topic": "Growing as a teacher",
    "status": "refreshing",
@@ -806,6 +825,7 @@ window.CTLS = {
    ]
   },
   {
+   "id": "trauma-informed",
    "title": "Trauma Informed Pedagogy",
    "topic": "Active & engaging teaching",
    "status": "refreshing",
@@ -876,6 +896,7 @@ window.CTLS = {
    ]
   },
   {
+   "id": "trauma-online",
    "title": "Trauma Responsive Online and LMS Course Design and Teaching",
    "topic": "Presence, online & tech",
    "status": "refreshing",
@@ -938,6 +959,7 @@ window.CTLS = {
    ]
   },
   {
+   "id": "what-is-pedagogy",
    "title": "What is Pedagogy?",
    "topic": "Growing as a teacher",
    "status": "refreshing",
@@ -997,6 +1019,7 @@ window.CTLS = {
    ]
   },
   {
+   "id": "breakout-rooms",
    "title": "What Nobody Tells You About Designing Effective Breakout Room Activities in Blackboard Collaborate Ultra",
    "topic": "Active & engaging teaching",
    "status": "refreshing",
@@ -1075,7 +1098,7 @@ window.CTLS = {
      "note": "add for hands-on skills"
     },
     {
-     "res": "Alignment Between Assessments & Outcomes",
+     "res": "Alignment Between Assessments and Outcomes",
      "note": "check the assessment matches the outcome"
     }
    ]
@@ -1090,7 +1113,7 @@ window.CTLS = {
      "note": "types, benefits, and step-by-step build"
     },
     {
-     "res": "Alignment Between Assessments & Outcomes",
+     "res": "Alignment Between Assessments and Outcomes",
      "note": "make the criteria trace back to outcomes"
     }
    ]
@@ -1105,7 +1128,7 @@ window.CTLS = {
      "note": "ground the task in real work from your field"
     },
     {
-     "res": "Alignment Between Assessments & Outcomes",
+     "res": "Alignment Between Assessments and Outcomes",
      "note": "raise the cognitive demand past recall"
     }
    ]
@@ -1164,6 +1187,90 @@ window.CTLS = {
     {
      "res": "Creating your Continuous Appointment ePortfolio with CTLS's Google Sites Template: Step-by-Step Guide",
      "note": "build it with the CTLS template"
+    }
+   ]
+  },
+  {
+   "id": "build-a-course",
+   "label": "Build a course from scratch",
+   "intro": "The order to do it in: the design lens, then the outcome, then the thing you mark it with.",
+   "steps": [
+    {
+     "res": "A Process for Getting Started: Universal Design for Learning (UDL)",
+     "note": "design for the whole class before you design for the average one"
+    },
+    {
+     "res": "Bloom's Taxonomy Cognitive Domain",
+     "note": "pick the level, then the verb the outcome will use"
+    },
+    {
+     "res": "Alignment Between Assessments and Outcomes",
+     "note": "check the assessment actually measures the outcome you wrote"
+    },
+    {
+     "res": "Rubrics: Purposes and Rationale",
+     "note": "build the thing you will mark it with, before you have to mark it"
+    },
+    {
+     "res": "Delivering Planning Checklist",
+     "note": "the last pass before the course goes live"
+    }
+   ]
+  },
+  {
+   "id": "new-instructor",
+   "label": "Find my feet as a new instructor",
+   "intro": "The vocabulary the rest of this assumes, a design lens to start with, and the one document you will be asked for later.",
+   "steps": [
+    {
+     "res": "What is Pedagogy?",
+     "note": "the vocabulary everything else here takes for granted"
+    },
+    {
+     "res": "A Process for Getting Started: Universal Design for Learning (UDL)",
+     "note": "a six-step cycle you can start applying to one lesson this week"
+    },
+    {
+     "res": "Teaching Philosophy",
+     "note": "start a draft now; you will need it at continuous appointment"
+    }
+   ]
+  },
+  {
+   "id": "design-for-every-student",
+   "label": "Design for every student in the room",
+   "intro": "Accessibility and trauma-informed practice built in at the design stage, rather than retrofitted when someone is already struggling.",
+   "steps": [
+    {
+     "res": "A Process for Getting Started: Universal Design for Learning (UDL)",
+     "note": "build the flexibility in up front"
+    },
+    {
+     "res": "Trauma Informed Pedagogy",
+     "note": "why some students disengage, and what lowers the load without lowering the bar"
+    },
+    {
+     "res": "Trauma Responsive Online and LMS Course Design and Teaching",
+     "note": "the same thinking, applied to the course shell"
+    }
+   ]
+  },
+  {
+   "id": "cut-grading-time",
+   "label": "Cut my grading time",
+   "intro": "Most slow marking was designed in long before the marking started.",
+   "steps": [
+    {
+     "res": "Alignment Between Assessments and Outcomes",
+     "note": "a lot of slow marking is an assessment that was never aimed at the outcome"
+    },
+    {
+     "res": "Rubrics: Purposes and Rationale",
+     "note": "the biggest lever: decide what you are looking for before you look"
+    },
+    {
+     "res": "Authentic Assessment: Purposes and Rationale",
+     "note": "tasks worth marking, and harder to fake"
     }
    ]
   }
@@ -2062,7 +2169,7 @@ window.CTLS = {
  "edges": [
   {
    "from": "Bloom's Taxonomy Cognitive Domain",
-   "to": "Alignment Between Assessments & Outcomes",
+   "to": "Alignment Between Assessments and Outcomes",
    "rel": "prerequisite-of, the alignment chart is built on Bloom's six cognitive levels, so the verb bank must be understood first"
   },
   {
@@ -2081,12 +2188,12 @@ window.CTLS = {
    "rel": "pairs-with, completes the three-domain reference set"
   },
   {
-   "from": "Alignment Between Assessments & Outcomes",
+   "from": "Alignment Between Assessments and Outcomes",
    "to": "Rubrics: Purposes and Rationale",
    "rel": "pairs-with, once assessment type is aligned to the outcome level, a rubric scores it"
   },
   {
-   "from": "Alignment Between Assessments & Outcomes",
+   "from": "Alignment Between Assessments and Outcomes",
    "to": "Authentic Assessment: Purposes and Rationale",
    "rel": "pairs-with, both apply constructive alignment, authentic tasks targeting higher-order levels"
   },
@@ -2122,7 +2229,7 @@ window.CTLS = {
   },
   {
    "from": "A Process for Getting Started: Universal Design for Learning (UDL)",
-   "to": "Alignment Between Assessments & Outcomes",
+   "to": "Alignment Between Assessments and Outcomes",
    "rel": "pairs-with, the UDL investigate/teach steps lean on outcome-assessment alignment"
   },
   {

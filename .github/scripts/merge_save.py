@@ -31,6 +31,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from merge_catalogue import merge_payloads, render_report
+import make_fallback
 
 DATA = "ctls-data.json"
 MAX_WALK = 500          # how far back in main history a base rev may sit
@@ -161,6 +162,11 @@ def main():
 
         Path(DATA).write_text(json.dumps(merged, indent=1, ensure_ascii=False) + "\n",
                               encoding="utf-8")
+        # Keep the offline fallback in step with what we are about to publish. It drifted
+        # for months because nothing regenerated it, and a fallback that answers from a
+        # stale catalogue is worse than one that fails loudly. "commit -am" below picks it
+        # up, so the mirror always ships in the same commit as the data it mirrors.
+        make_fallback.build()
         sh("git", "-c", "user.name=%s" % BOT_NAME, "-c", "user.email=%s" % BOT_EMAIL,
            "commit", "-am",
            "Publish editor save (rev %s, from %.10s)" % (merged["_meta"]["rev"], sha))
