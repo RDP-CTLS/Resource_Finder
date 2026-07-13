@@ -151,6 +151,24 @@
   .stepnum{display:inline-flex;align-items:center;justify-content:center;width:1.4rem;height:1.4rem;
            border-radius:50%;background:var(--purple);color:#fff;font-size:.72rem;font-weight:800;
            margin-right:.5rem;vertical-align:middle;}
+  .onward{border-top:1px solid var(--line);margin-top:1.8rem;padding-top:1.2rem;max-width:44rem;}
+  .onward .k{font-size:.78rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);}
+  .onward p{margin:.3rem 0 .7rem;color:var(--ink-soft);font-size:.9rem;}
+  .onward .btns{display:flex;gap:.6rem;flex-wrap:wrap;}
+  .obtn{background:#fff;border:1.5px solid var(--line);border-radius:8px;padding:.5rem .95rem;
+        font-weight:700;font-size:.85rem;color:var(--purple-deep);cursor:pointer;}
+  .obtn:hover{border-color:var(--purple);}
+  .obtn:focus-visible{outline:2px solid var(--purple);outline-offset:2px;}
+  /* A dead link is announced, never silently redirected. */
+  .deadbar{background:var(--amber-soft);border:1px solid #f0d9bd;border-left:4px solid var(--amber);
+           border-radius:0 12px 12px 0;padding:1.05rem 1.3rem;margin:0 0 1.4rem;max-width:46rem;}
+  .deadbar .k{font-weight:800;font-size:.82rem;letter-spacing:.04em;text-transform:uppercase;color:var(--amber);}
+  .deadbar p{margin:.45rem 0 0;font-size:.92rem;color:#7a5a2a;}
+  .deadbar .asked{color:var(--ink);}
+  .deadbar .tell{font-size:.85rem;}
+  .deadoffer{background:#fff;border:1px solid #f0d9bd;border-radius:10px;padding:.8rem 1rem;margin-top:.6rem;
+             display:flex;flex-direction:column;gap:.35rem;align-items:flex-start;}
+  .deadoffer span{font-size:.86rem;color:var(--ink-soft);}
   .devpanel{background:var(--amber-soft);border:1px solid #f0d9bd;border-radius:12px;padding:1.3rem 1.4rem;}
   .devpanel h3{margin:0 0 .4rem;color:var(--amber);}
   .devpanel p{margin:.3rem 0;color:#7a5a2a;font-size:.94rem;}
@@ -404,9 +422,11 @@
     var live = topicResources(name);
     var head = '<button class="back" data-home>'+icon('dot',12)+' All topics</button>'
       +'<div class="topic-head"><div class="eyebrow">Topic</div><h2>'+esc(name)+'</h2>'
-      +'<p class="blurb">'+esc(t.blurb||'')+'</p></div>';
+      +'<p class="blurb">'+esc(t.blurb||'')+'</p>'
+      +(t.id?'<div class="sharerow">'+copyBtn('#/topic/'+t.id)+'<span class="sharehint">Send this topic to someone</span></div>':'')
+      +'</div>';
     if(t.state!=='active'){
-      return head+(name==='Indigenizing my teaching'?indigPanel():devPanel(name));
+      return sharedStrip('topic')+head+(name==='Indigenizing my teaching'?indigPanel():devPanel(name));
     }
     var starts = (t.startHere||[]).map(function(title){
       var rr = byTitle(title);
@@ -415,34 +435,44 @@
     }).join('');
     var startBlock = starts ? '<div class="starthere"><div class="k">Start here when you are short on time</div><ol>'+starts+'</ol></div>' : '';
     var cards = live.map(function(r){return resCard(r);}).join('');
-    return head+startBlock+provKey()+'<div style="margin-top:.9rem">'+cards+'</div>';
+    return sharedStrip('topic', live.length)+head+startBlock+provKey()+'<div style="margin-top:.9rem">'+cards+'</div>';
   }
 
   function taskById(id){var ts=D.tasks||[];for(var i=0;i<ts.length;i++){if(ts[i].id===id)return ts[i];}return null;}
   /* ---- sharing --------------------------------------------------------------
-     Only TASKS get a share link for now. A task's id is hand-authored in the data
-     and the editor cannot create or rename tasks, so #/task/<id> can never rot.
-     Resource links still key off the title (slugify(title)), and titles DO get
-     renamed, so minting per-resource links at scale would mass-produce links that
-     break later. That waits on a stable resource id.
-     The "shared with you" strip only shows when the task WAS the entry point, i.e.
-     the page was opened on a #/task/ link. Clicking through to the same task from
-     inside the app must not claim someone sent it to you -- so the flag is one-shot:
-     the moment the reader navigates anywhere else they are browsing, not arriving,
-     and coming back to the very same task later must not re-arm the strip. (Testing
-     the hash alone is not enough: home -> back into the same task would re-match.) */
+     Three things are shareable, and every share link is built on a STABLE id:
+       #/task/<id>   a path        (ids hand-authored; editor cannot rename a task)
+       #/topic/<id>  a topic       (ids hand-authored; editor cannot rename a topic)
+       #/r/<id>      one resource  (r.id, assigned once and never regenerated)
+     A resource's id is deliberately NOT slugify(title): titles get renamed in
+     production, and a link already sitting in someone's inbox cannot be renamed with
+     them. r.id is absent from FORM_KEYS, so mergePreserving() carries it through
+     every edit untouched -- an editor physically cannot break a link by doing their
+     job. The old #/res/<slug> route stays FOREVER: every link ever sent, plus the
+     staff SharePoint page, still resolves.
+
+     The "shared with you" strip only shows when the link WAS the entry point. The
+     flag is one-shot: the moment the reader navigates anywhere else they are
+     browsing, not arriving, and returning to the very same page later must not
+     re-arm it. (Testing the hash alone is not enough: home -> back to the same task
+     would re-match.) */
   var entryHash = location.hash||'';
-  var arrivedByLink = /^#\/task\//.test(entryHash);
+  var arrivedByLink = /^#\/(task|topic|r|res)\//.test(entryHash);
   window.addEventListener('hashchange', function(){
     if(arrivedByLink && location.hash !== entryHash) arrivedByLink = false;
   });
 
   function shareUrl(hash){ return location.origin+location.pathname+hash; }
 
-  function sharedStrip(count){
+  // kind: 'task' | 'topic' | 'res'. One component, three arrivals, one sentence apart.
+  function sharedStrip(kind, count){
     if(!arrivedByLink) return '';
+    var line;
+    if(kind==='res')        line = 'Someone at CTLS chose this one resource for you. It is open below.';
+    else if(kind==='topic') line = 'Someone at CTLS sent you this topic'+(count?', and the '+count+' resources in it':'')+'.';
+    else                    line = 'Someone at CTLS sent you this path.'+(count>1?' The '+count+' resources below are in the order they suggest working through them.':'');
     return '<div class="sharebar"><div class="eyebrow">Shared with you</div>'
-      +'<p>Someone at CTLS sent you this path. '+(count>1?'The '+count+' resources below are in the order they suggest working through them.':'')+'</p>'
+      +'<p>'+line+'</p>'
       +'<p class="perm">You do not have to read anything else.</p></div>';
   }
 
@@ -511,7 +541,24 @@
     var n = 0;
     var cards = (t.steps||[]).map(function(st){return byTitle(st.res);}).filter(Boolean)
       .map(function(r){ n++; return resCard(r, n); }).join('');
-    return sharedStrip((t.steps||[]).length)+head+startBlock+provKey()+'<div style="margin-top:.9rem">'+cards+'</div>';
+    return sharedStrip('task',(t.steps||[]).length)+head+startBlock+provKey()+'<div style="margin-top:.9rem">'+cards+'</div>';
+  }
+
+  /* The focused arrival for ONE shared resource (#/r/<id>). Deliberately NOT the
+     topic page with a card flashing lime: they were sent one thing, so show one
+     thing, open, and offer the catalogue underneath as a next step rather than as
+     context they have to wade through first. In-app clicks still go to
+     #/res/<slug> -> topic + reveal, because there the neighbourhood IS the point. */
+  function resArrival(r){
+    var tp = topicByName(r.topic);
+    var siblings = D.resources.filter(function(x){ return x.topic===r.topic && x.title!==r.title; }).length;
+    var onward = '<div class="onward"><div class="k">There is more where this came from</div>'
+      +'<p>This sits in <b>'+esc(r.topic)+'</b>'+(siblings?', which has '+siblings+' other resource'+(siblings===1?'':'s'):'')+'.</p>'
+      +'<div class="btns">'
+      +(tp&&tp.id?'<button class="obtn" data-topic-id="'+esc(tp.id)+'">See all of '+esc(r.topic)+'</button>':'')
+      +'<button class="obtn" data-home>Browse every topic</button>'
+      +'</div></div>';
+    return sharedStrip('res')+resCard(r, 0, true)+provKey()+onward;
   }
 
   function devPanel(name){
@@ -557,7 +604,9 @@
   // stepNum is set only from taskView, to number the cards in a path. Every other
   // caller MUST invoke resCard through a wrapper, never bare .map(resCard), or the
   // array index arrives here as a step number and every card silently gets numbered.
-  function resCard(r, stepNum){
+  // solo=true is the shared-resource arrival: render it already open, because the
+  // reader came for exactly this card and should not have to find "Details & related".
+  function resCard(r, stepNum, solo){
     var meta = '<span class="chip read">'+icon('dot',11)+' '+esc(r.readTime||'?')+' min read</span>'
       + (r.format?'<span class="chip fmt">'+esc(r.format)+'</span>':'')
       + ((state.view==='search'||state.view==='task') && r.topic?'<span class="chip topic">'+esc(r.topic)+'</span>':'')
@@ -571,7 +620,11 @@
       + (state.ai && hasAi?'<div class="infoblock ctls"><div class="blab">Where AI fits <span class="prov ctls">CTLS context</span></div><p>'+esc(r.ai)+'</p></div>':'')
       + (state.indig?'<div class="infoblock gated"><div class="blab">Where Indigenization fits <span class="prov ctls">CTLS context</span></div><p>Consider whose knowledge this resource centres and how Indigenous perspectives and ways of knowing could be woven in. The Indigenous Learning Designer can help. <i>(Owner-gated, in development.)</i></p></div>':'');
     var rUrl = safeUrl(r.url);
-    var openLink = rUrl ? '<div class="openrow"><a class="openres" href="'+esc(rUrl)+'" target="_blank" rel="noopener"'+(r.status==='refreshing'?' title="Original version - a refreshed edition is on the way"':'')+'>Open the resource (PDF) &#8599;</a></div>' : '';
+    // The row is built unconditionally, with the PDF button INSIDE it: a resource with
+    // no URL still needs somewhere to hang its Copy link. Copy link is gated on r.id --
+    // never mint a share link for a resource that has no stable id to point at.
+    var pdfBtn = rUrl ? '<a class="openres" href="'+esc(rUrl)+'" target="_blank" rel="noopener"'+(r.status==='refreshing'?' title="Original version - a refreshed edition is on the way"':'')+'>Open the resource (PDF) &#8599;</a>' : '';
+    var openLink = (pdfBtn || r.id) ? '<div class="openrow">'+pdfBtn+(r.id?copyBtn('#/r/'+r.id):'')+'</div>' : '';
     // Situational scent, visible without expanding (CTLS-written, hence the green label).
     var when = (r.useWhen&&r.useWhen.length)?'<p class="usewhen"><span class="uw">Use this when</span>'+r.useWhen.map(esc).join(' &middot; ')+'</p>':'';
     // Page anchors: a mini table of contents INTO the PDF (#page=N works because the
@@ -588,8 +641,9 @@
       + (r.poly?'<div class="infoblock ctls"><div class="blab">Polytechnic angle <span class="prov ctls">CTLS context</span></div><p>'+esc(r.poly)+'</p></div>':'')
       + research
       + (rel?'<div style="margin-top:.6rem"><span class="lab" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:#5b6770">Related</span><div class="rel">'+rel+'</div></div>':'');
-    var moreBlock = inner ? '<button class="expand" data-expand>Details &amp; related</button><div class="more">'+inner+'</div>' : '';
-    return '<article class="rescard" data-card="'+esc(r.title)+'"><div class="body">'
+    var moreBlock = inner ? (solo ? '<div class="more">'+inner+'</div>'
+                                  : '<button class="expand" data-expand>Details &amp; related</button><div class="more">'+inner+'</div>') : '';
+    return '<article class="rescard'+(solo?' open':'')+'" data-card="'+esc(r.title)+'"><div class="body">'
       +((state.edit&&!state.editCtx)?'<button class="cardpencil" type="button" data-edit-card="'+esc(r.title)+'" aria-label="Edit '+esc(r.title)+'">&#9998; Edit</button>':'')
       +'<h4>'+(stepNum?'<span class="stepnum">'+stepNum+'</span>':'')+esc(r.title)+'</h4>'
       +'<div class="meta">'+meta+'</div>'
@@ -892,7 +946,11 @@
     if(orig){ for(var i=0;i<D.resources.length;i++){ if(D.resources[i].title===orig){ var prev=D.resources[i];
           D.resources[i]=mergePreserving(prev, store); recordExpectation(prev, D.resources[i]); done=true; break; } }
       if(done && store.title!==orig){ renameRefs(orig, store.title); delete sessionExpect[orig]; } }
-    if(!done){ D.resources.push(store); recordExpectation(null, store); }
+    // A NEW resource needs a stable id minted here: normalizeForStore() builds from
+    // the form, and id is not a form field. An existing resource keeps its id for
+    // free, because mergePreserving() copies every key not in FORM_KEYS. Seeded from
+    // the title once, then frozen -- later renames never touch it.
+    if(!done){ if(!store.id) store.id=mintId(store.title); D.resources.push(store); recordExpectation(null, store); }
     pending++; savePendingLocal();
     var direct = FS_OK && !!saveHandle;
     state.saved={title:store.title, action:orig?'updated':'added', sync:direct?'trying':null};
@@ -1121,8 +1179,10 @@
     document.body.classList.toggle('editing-form', !!state.editCtx);
     if(state.editCtx){ main.innerHTML=restoreBar()+editFormView(); if(!(opt&&opt.keepScroll)) window.scrollTo(0,0); return; }
     var bar = staleBar() + (state.edit ? restoreBar()+savedBar()+editBar() : '');
+    bar += deadBanner();
     if(state.view==='topic'){ main.innerHTML=bar+topicView(state.topic); }
     else if(state.view==='task'){ main.innerHTML=bar+taskView(state.task); }
+    else if(state.view==='res'){ var sr=byTitle(state.res); main.innerHTML=bar+(sr?resArrival(sr):teacherShell()); }
     else { main.innerHTML=bar+teacherShell(); }
     var q=document.getElementById('q'); if(q && q.value!==state.q && document.activeElement!==q){ q.value=state.q; }
     var ai=document.getElementById('aichk'); if(ai){ ai.addEventListener('change',function(){ state.ai=ai.checked; var L=document.getElementById('live'); if(L) L.textContent=state.ai?'AI lens on. Open a topic to see where AI fits in each resource.':'AI lens off.'; paintResults(); }); }
@@ -1157,6 +1217,13 @@
   // A mangled share link (e.g. a stray "%") must fall back to home, not crash the boot render.
   function safeDecode(s){try{return decodeURIComponent(s);}catch(e){return null;}}
   function resBySlug(sl){for(var i=0;i<D.resources.length;i++){if(slugify(D.resources[i].title)===sl)return D.resources[i];}return null;}
+  function resById(id){for(var i=0;i<D.resources.length;i++){if(D.resources[i].id===id)return D.resources[i];}return null;}
+  // Seed a new resource's permanent id from its title, trimmed and de-duplicated.
+  // Only ever called once, at creation. A rename must never re-run this.
+  function mintId(title){
+    var base=slugify(title).split('-').slice(0,3).join('-').slice(0,28) || 'resource';
+    var id=base, i=2; while(resById(id)){ id=base+'-'+i; i++; }
+    return id; }
   function topicById(id){for(var i=0;i<D.topics.length;i++){if(D.topics[i].id===id)return D.topics[i];}return null;}
   function nav(hash){ if(location.hash===hash){ applyHash(); } else { location.hash=hash; } }
   function openTopic(name){ var t=topicByName(name); nav(t&&t.id?'#/topic/'+t.id:'#/'); }
@@ -1193,22 +1260,55 @@
       while(n<s.length && n<target.length && s.charAt(n)===target.charAt(n)) n++;
       if(n>bestLen){ bestLen=n; best=r; } });
     return bestLen>=10 ? best : null; }   // 10 chars of slug is well past coincidence
+  /* A dead link must NEVER silently substitute a different resource. The old code
+     opened closestBySlug()'s guess and announced it only through the visually-hidden
+     aria-live region, so a sighted reader saw a different card appear with no
+     explanation. That is not a cosmetic problem: the three Bloom's slugs share a
+     17-character prefix, well past the 10-char threshold, so a dead link to the
+     Cognitive domain resolves to the AFFECTIVE domain and tells the reader it is
+     the one they asked for. Someone sent a link about cognitive outcomes would read
+     the wrong resource believing it was what their learning designer chose.
+     So: offer the guess, never take it on the reader's behalf. */
   function deadLink(slug, wantEdit){
     if(wantEdit){ state.edit=true; ensureEditParam(); }
     state.editCtx=null;
     var near=closestBySlug(slug);
-    if(near){
-      state.view='topic'; state.topic=near.topic;
-      if(wantEdit){ startEdit(near.title); } else { render(); reveal(near.title); }
-      if(live) live.textContent='That link points to an older name for this resource. It is now called "'+near.title+'" -- opened it for you. The link itself is out of date; tell CTLS so it can be refreshed.';
+    // Edit mode is staff-only and they asked for a specific card: keep opening the
+    // closest match's form, but the banner now says so out loud.
+    if(wantEdit && near){
+      state.dead={slug:slug, near:near.title};
+      state.view='topic'; state.topic=near.topic; startEdit(near.title);
+      if(live) live.textContent='That link points to an older name. Opened "'+near.title+'" for editing.';
       return; }
-    // Nothing close: fall back to a search on the first few words of the slug.
+    state.dead={slug:slug, near:near?near.title:null};
     state.q=String(slug||'').replace(/-+/g,' ').trim().split(/\s+/).slice(0,4).join(' ');
     state.view='search'; render();
-    if(live) live.textContent='That link points to a resource that has been renamed or removed. Here are the closest matches.';
+    if(live) live.textContent = near
+      ? 'That link is out of date. The closest match is "'+near.title+'". Nothing has been opened for you; choose it if it is the one you wanted.'
+      : 'That link points to a resource that has been renamed or removed. Here are the closest matches.';
     return; }
+
+  function deSlug(s){ return String(s||'').replace(/-+/g,' ').trim(); }
+  function deadBanner(){
+    if(!state.dead) return '';
+    var d=state.dead, near=d.near?byTitle(d.near):null;
+    var out='<div class="deadbar" role="alert"><div class="k">&#9888; This link is out of date</div>'
+      +'<p>You are in the right place. This is the CTLS Resource Finder. The link you clicked points to a resource that has been renamed or removed since it was sent.</p>'
+      +'<p class="asked">The link was asking for: <b>&ldquo;'+esc(deSlug(d.slug))+'&rdquo;</b></p>';
+    if(near){
+      out+='<p>We think it is now this one. Nothing has been opened for you, in case it is not what you expected:</p>'
+        +'<div class="deadoffer"><b>'+esc(near.title)+'</b>'
+        +'<span>'+esc(near.oneLine||'')+'</span>'
+        +'<button class="obtn" type="button" data-open-dead="'+esc(near.title)+'">Yes, open this one</button></div>';
+    } else {
+      out+='<p>We could not find a close match. It may have been retired. The nearest search results are below.</p>';
+    }
+    out+='<p class="tell">If you were sent this link, please let <a href="mailto:CTLS@rdpolytech.ca?subject=Broken%20Resource%20Finder%20link&body='+encodeURIComponent('The link I followed was: '+location.href)+'">CTLS@rdpolytech.ca</a> know, so the old link can be retired.</p>'
+      +'</div>';
+    return out; }
   function applyHash(){
     var h=location.hash||'', m;
+    state.dead=null;   // a banner belongs to the link that produced it, not to the next page
     // Some link renderers (e.g. SharePoint's Markdown web part) percent-encode the
     // "/" in a fragment as %2F, so #/edit/x arrives as #%2Fedit%2Fx. Normalize it back
     // so deep links route the same however they were rendered, shared, or copied.
@@ -1226,6 +1326,15 @@
       return deadLink(sl, true); }
     if(m=h.match(/^#\/topic\/([^\/]+)/)){ var t=topicById(safeDecode(m[1])); if(t){ state.editCtx=null; state.view='topic'; state.topic=t.name; render(); return; } }
     if(m=h.match(/^#\/task\/([^\/]+)/)){ var id=safeDecode(m[1]); if(id&&taskById(id)){ state.editCtx=null; state.view='task'; state.task=id; render(); return; } }
+    // #/r/<id> is the canonical share link for one resource, and the ONLY route that
+    // renders the focused single-card arrival. It resolves on the stable id first, then
+    // falls back to treating the segment as a legacy slug, so a hand-typed or half-
+    // remembered link still lands. In edit mode it opens the form, same as #/res/.
+    if(m=h.match(/^#\/r\/([^\/]+)/)){ var rid=safeDecode(m[1]); var rr=rid?(resById(rid)||resBySlug(rid)):null;
+      if(rr){
+        if(state.edit){ state.view='topic'; state.topic=rr.topic; startEdit(rr.title); return; }
+        state.editCtx=null; state.view='res'; state.res=rr.title; render(); return; }
+      return deadLink(rid, false); }
     if(m=h.match(/^#\/res\/([^\/]+)/)){ var rsl=safeDecode(m[1]), r=resBySlug(rsl); if(r){
       if(state.edit){ state.view='topic'; state.topic=r.topic; startEdit(r.title); return; }   // in edit mode, open its form
       state.view='topic'; state.topic=r.topic; render(); reveal(r.title); return; }
@@ -1250,6 +1359,9 @@
     render(); }
   document.addEventListener('click',function(e){
     var cp=e.target.closest('[data-copy]'); if(cp){ copyLink(cp.getAttribute('data-copy'), cp); return; }
+    var od=e.target.closest('[data-open-dead]'); if(od){ var dt=od.getAttribute('data-open-dead'), dr=byTitle(dt);
+      if(dr){ state.dead=null; state.view='res'; state.res=dt; if(history.replaceState&&dr.id) history.replaceState(null,'','#/r/'+dr.id); render(); } return; }
+    var tg=e.target.closest('[data-topic-id]'); if(tg){ nav('#/topic/'+tg.getAttribute('data-topic-id')); return; }
     // ---- editor actions (checked first; harmless when edit mode is off) ----
     var ec=e.target.closest('[data-edit-card]'); if(ec){ startEdit(ec.getAttribute('data-edit-card')); return; }
     if(e.target.closest('[data-add-res]')){ startEdit(null); return; }
