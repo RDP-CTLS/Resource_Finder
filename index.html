@@ -14,6 +14,10 @@
     --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   }
   *{box-sizing:border-box;} html{-webkit-font-smoothing:antialiased;scroll-behavior:smooth;}
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto;}
+    *,*::before,*::after{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important;}
+  }
   body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.6;}
   a{color:var(--purple-deep);} button{font-family:inherit;}
   .wrap{max-width:1080px;margin:0 auto;padding:0 1.4rem;}
@@ -307,7 +311,7 @@
   <p id="foot-note"></p>
 </footer>
 
-<div aria-live="polite" class="visually-hidden" id="live"></div>
+<div aria-live="polite" role="status" aria-atomic="true" class="visually-hidden" id="live"></div>
 
 <!-- ctls-data.js is a file:// fallback only; the primary content source is
      ctls-data.json, fetched at runtime (see loadData() below). Over http (GitHub
@@ -1277,7 +1281,12 @@
   function reveal(title){
     setTimeout(function(){
       var el=main.querySelector('[data-card="'+(window.CSS&&CSS.escape?CSS.escape(title):title.replace(/"/g,'\\"'))+'"]');
-      if(el){ el.classList.add('open'); el.scrollIntoView({behavior:'smooth',block:'center'}); el.style.outline='2px solid var(--lime)'; setTimeout(function(){el.style.outline='';},1600); }
+      // reveal() runs on the shared-link arrival path, so a reader who has asked the OS
+      // for less motion must not be smooth-scrolled and flashed at by a link someone sent them.
+      if(el){ el.classList.add('open');
+        var calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        el.scrollIntoView({behavior: calm ? 'auto' : 'smooth', block:'center'});
+        if(!calm){ el.style.outline='2px solid var(--lime)'; setTimeout(function(){el.style.outline='';},1600); } }
     },60);
   }
   function openResource(title){
@@ -1339,7 +1348,7 @@
   function deadBanner(){
     if(!state.dead) return '';
     var d=state.dead, near=d.near?byTitle(d.near):null;
-    var out='<div class="deadbar" role="alert"><div class="k">&#9888; This link is out of date</div>'
+    var out='<div class="deadbar"><div class="k">&#9888; This link is out of date</div>'
       +'<p>You are in the right place. This is the CTLS Resource Finder. The link you clicked points to a resource that has been renamed or removed since it was sent.</p>'
       +'<p class="asked">The link was asking for: <b>&ldquo;'+esc(deSlug(d.slug))+'&rdquo;</b></p>';
     if(near){
