@@ -7,7 +7,7 @@
 <style>
   :root{
     --purple:#6b4e9e; --purple-deep:#54397e; --lime:#8cc63e; --orange:#f3992f;
-    --ink:#33303e; --ink-soft:#6a6678; --bg:#f4f2f7; --card:#ffffff; --line:#e7e3ef;
+    --ink:#33303e; --ink-soft:#6a6678; --bg:#f4f2f7; --card:#ffffff; --line:#e7e3ef; --line-strong:#8b7bb0;
     --t-purple:#f3effa; --t-lime:#f2f8e6; --t-orange:#fdf2e4;
     --teal:#1d7a8c; --teal-deep:#155e6d; --t-teal:#e3f2f5;
     --amber:#8a5410; --amber-soft:#fdf0dd; --violet:#685BC7; --forest:#54397e;
@@ -204,19 +204,44 @@
   .editbar p{margin:0 0 .6rem;}
   .editbar a{color:#7a5a2a;font-weight:700;}
   .editbar .ebrow{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;}
-  .pendbadge{background:var(--amber);color:#fff;border-radius:999px;font-weight:800;font-size:.78rem;padding:.3rem .75rem;}
+  /* Head row: the sentence on the left, the state chip hard right. The chip comes
+     BEFORE the buttons in both reading order and eye path, because the first question
+     an editor has is "is my work safe", not "what can I press". */
+  .editbar .ebhead{display:flex;justify-content:space-between;align-items:flex-start;gap:.9rem;margin:0 0 .7rem;}
+  .editbar .ebhead .t{flex:1 1 20rem;}
+  /* Where the file goes. Configuration, not an action: it reads as a footnote and its
+     control is a link, because repointing the save target is rare and consequential. */
+  .editbar .ebset{margin:.7rem 0 0;font-size:.8rem;color:#8a6a3a;display:flex;flex-wrap:wrap;align-items:center;gap:.3rem;}
+  /* The state chip is the one thing that must never lie and can never be dismissed.
+     Colour first, words second. */
+  .statechip{display:inline-flex;align-items:center;gap:.4rem;flex:0 0 auto;min-height:32px;
+    border-radius:999px;padding:.25rem .8rem;font-weight:800;font-size:.78rem;border:1px solid;white-space:nowrap;}
+  .statechip.live{background:#eef7de;color:#3c5a10;border-color:#5f7d1e;}
+  .statechip.busy{background:var(--t-orange);color:#7a5a2a;border-color:var(--amber);}
+  .statechip.stuck{background:#fdeef4;color:#8a1a4d;border-color:#b4185d;}
   /* post-apply "step 2" banner + unsent-changes restore offer */
   .savedbar{background:var(--t-lime);border:1px solid #cde3a4;border-radius:12px;padding:.8rem 1rem;margin:1.1rem 0 0;font-size:.9rem;color:#3c5a10;display:flex;flex-wrap:wrap;align-items:center;gap:.7rem;}
   .savedbar .msg{flex:1 1 24rem;margin:0;}
   .savedbar a{color:#3c5a10;font-weight:700;}
+  /* A problem must not be delivered in the success colour. The lime bar means "done";
+     these two states mean "not done", and the chip beside them is already red. */
+  .savedbar.warn{background:#fdeef4;border-color:#f3cfe0;color:#8a1a4d;}
+  .savedbar.warn a{color:#8a1a4d;}
   .restorebar{background:var(--t-purple);border:1px solid #d9cfec;border-radius:12px;padding:.8rem 1rem;margin:1.1rem 0 0;font-size:.9rem;color:var(--purple-deep);display:flex;flex-wrap:wrap;align-items:center;gap:.7rem;}
   .restorebar .msg{flex:1 1 24rem;margin:0;}
   /* the header search is a no-op while the form is open, so hide it (finding H) */
   body.editing-form .searchbar{display:none;}
-  .ebtn{border:0;border-radius:8px;font-weight:700;font-size:.85rem;padding:.5rem .95rem;cursor:pointer;font-family:inherit;}
+  /* 44px target, to match .sharebtn and .cardpencil. The editor toolbar was the one
+     button cluster in the app that missed the bar the rest of it was held to. */
+  .ebtn{border:0;border-radius:8px;font-weight:700;font-size:.85rem;padding:.5rem .95rem;cursor:pointer;font-family:inherit;
+    min-height:44px;display:inline-flex;align-items:center;justify-content:center;line-height:1;}
   .ebtn.primary{background:var(--purple);color:#fff;} .ebtn.primary:hover{background:var(--purple-deep);}
-  .ebtn.primary:disabled{background:#c7bfe0;cursor:not-allowed;}
-  .ebtn.ghost{background:var(--card);color:var(--purple-deep);border:1.5px solid var(--line);} .ebtn.ghost:hover{border-color:var(--purple);}
+  .ebtn.primary:disabled{background:#e3e0ee;color:#6a6678;cursor:not-allowed;}
+  /* --line (#e7e3ef) gave a 1.14:1 border on the orange bar, well under the 3:1 WCAG
+     1.4.11 wants for a control boundary. --line-strong is 3.4:1 there, 3.8:1 on white. */
+  .ebtn.ghost{background:var(--card);color:var(--purple-deep);border:1.5px solid var(--line-strong);} .ebtn.ghost:hover{border-color:var(--purple);}
+  .ebtn.link{background:none;border:0;color:#7a5a2a;text-decoration:underline;padding:.5rem .2rem;font-size:.8rem;min-height:44px;}
+  .ebtn.link:hover{color:var(--amber);}
   .ebtn:focus-visible{outline:2px solid var(--purple);outline-offset:2px;}
   /* labelled edit chip on each card (44px target, finding J) */
   .rescard{position:relative;}
@@ -289,6 +314,9 @@
     .listrow input.pagecell{flex:1 1 5.5rem;}
     .notecard .nrow{flex-direction:column;}
     .editbar .ebrow,.savedbar,.restorebar{flex-direction:column;align-items:stretch;}
+    /* the buttons stack, but the chip must stay a chip and not become a full-width slab */
+    .editbar .ebhead{flex-direction:column;}
+    .statechip{align-self:flex-start;}
   }
 </style>
 </head>
@@ -324,7 +352,10 @@
   var D = {meta:{},topics:[],resources:[],tasks:[],glossary:[],edges:[]};
   var main = document.getElementById('main');
   var live = document.getElementById('live');
-  var state = {view:'home', topic:null, task:null, q:'', ai:false, indig:false, mode:'topics', edit:false, editCtx:null};
+  // saved  = what the last save is doing (null | trying | written | ok | unconfirmed | fail).
+  // savedSeen = which of those states the editor has dismissed the message for. Kept apart
+  //   so dismissing a message can never erase the state it describes.
+  var state = {view:'home', topic:null, task:null, q:'', ai:false, indig:false, mode:'topics', edit:false, editCtx:null, saved:null, savedSeen:null, restore:null};
 
   function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
@@ -870,10 +901,18 @@
      +'<div class="efgroup ext"><div class="gt">Outside research <span class="prov ext">teal</span></div><p class="gsub">Published research. Every fact carries its citation.</p>'
        +fResearch(d.research)+'</div>'
      +'<div class="editactions">'
-       +'<button class="ebtn primary" type="button" data-apply-edit>'+(orig?'Apply changes':'Add resource')+'</button>'
+       +'<button class="ebtn primary" type="button" data-apply-edit>Save</button>'
        +'<button class="ebtn ghost" type="button" data-cancel-edit>Cancel</button>'
        +'<span class="errline" id="editerrs-mini">'+miniErrs(errs)+'</span>'
-       +'<span class="note">Applying updates this page only; nothing goes public until it is saved to the shared Finder Data folder.</span>'
+       // This note used to say "nothing goes public until it is saved to the shared
+       // Finder Data folder" no matter what, which is false for anyone set up: applyEdit
+       // calls saveToFolder and the change is on its way to the public site. Telling an
+       // editor her half-finished card is private at the exact moment she commits it is
+       // the worst lie in the interface, and it is why editors go hunting for a second
+       // Save button that does not need to exist. So read the same flag applyEdit reads.
+       +'<span class="note">'+((FS_OK&&saveHandle)
+          ? 'Saving publishes this card. It goes live on the site about a minute later.'
+          : 'Saving keeps this on your screen only. Nothing is public until publishing is turned on.')+'</span>'
      +'</div></form></div>'; }
 
   // Publishing has two tiers. Direct save (below) writes straight into the
@@ -891,58 +930,89 @@
   // direct save cannot exist there and Publish is their only path.
   var PUBLISH_UI=false;
   function pubOK(){ return PUBLISH_UI || !FS_OK; }
-  function editBar(){
-    var verb = (FS_OK&&saveHandle)||!pubOK() ? 'saved' : 'published';
+
+  /* ---- one verb: Save ----
+     Saving a card publishes it. That is the whole model, and it is what the code has
+     always actually done (applyEdit calls saveToFolder for anyone set up). The old bar
+     asked an editor to hold four separate ideas -- a draft, a page-local "apply", a
+     folder write and a publish -- three of which are our plumbing, not her job.
+
+     Two rules hold this together:
+       1. STATE lives in a chip. It is never dismissible and it never lies.
+       2. ACTIONS appear only when they are the right action. A save button that must
+          not be pressed is not on screen at all. The old bar lit a purple "Save to the
+          shared folder" the whole time a save was in flight, which is exactly the
+          window where a second write can lose the first (see confirmPublish's note),
+          and it stayed lit under an alert that read "please do not save again". */
+  function stateChip(){
     var sync = state.saved && state.saved.sync;
-    // The backup is now held until the change is seen live, so "not yet saved" would
-    // be wrong once it is written -- say where it actually is instead.
-    var pb = pending>0 ? '<span class="pendbadge">'+pending+' change'+(pending===1?'':'s')+' '
-      +(sync==='written'?'publishing&hellip;':sync==='unconfirmed'?'not yet live':'not yet '+verb)+'</span>' : '';
+    var n = pending+' change'+(pending===1?'':'s');
+    if(pending>0 && (sync==='trying'||sync==='written')) return '<span class="statechip busy">Publishing '+n+'&hellip;</span>';
+    if(sync==='unconfirmed') return '<span class="statechip stuck">'+n+' not live</span>';
+    if(sync==='fail')        return '<span class="statechip stuck">'+n+' not saved</span>';
+    if(pending>0)            return '<span class="statechip stuck">'+n+' not published yet</span>';
+    return '<span class="statechip live">All changes are live</span>'; }
+
+  function editBar(){
+    var sync = state.saved && state.saved.sync;
     if(FS_OK&&saveHandle){
-      return '<div class="editbar"><p><b>Edit mode.</b> Click <b>&#9998; Edit</b> on any card to change it. Applying a change saves it to the shared Finder Data folder, and the site republishes itself (live in a minute or two).</p>'
-       +'<div class="ebrow"><button class="ebtn ghost" type="button" data-add-res>+ Add a resource</button>'
-       +'<button class="ebtn '+(pending>0?'primary':'ghost')+'" type="button" data-save-folder>Save to the shared folder</button>'
-       +(pubOK()?'<button class="ebtn ghost" type="button" data-publish>Publish instead (backup)</button>':'')
-       +'<button class="ebtn ghost" type="button" data-setup-save>Change save location</button>'+pb+'</div></div>'; }
+      // A save button earns its place only when a save genuinely has not happened.
+      // Never while one is in flight ('trying'/'written'), and never in 'unconfirmed',
+      // where the copy is asking her to keep her hands still.
+      var needsSave = pending>0 && (!sync || sync==='fail');
+      return '<div class="editbar">'
+       +'<div class="ebhead"><p class="t"><b>Edit mode.</b> Click <b>&#9998; Edit</b> on any card. Saving a card puts it on the live site about a minute later.</p>'+stateChip()+'</div>'
+       +'<div class="ebrow"><button class="ebtn primary" type="button" data-add-res>+ Add a resource</button>'
+       +(needsSave?'<button class="ebtn primary" type="button" data-save-folder>'+(sync==='fail'?'Try saving again':'Save these changes')+'</button>':'')
+       +'</div>'
+       +'<p class="ebset">Publishing from your Finder Data folder. <button class="ebtn link" type="button" data-setup-save>Change where it saves</button></p>'
+       +'</div>'; }
     if(pubOK())
-      return '<div class="editbar"><p><b>Edit mode.</b> Click <b>&#9998; Edit</b> on any card to change it. When you are ready, click <b>Publish</b> &mdash; it downloads your changes and opens the Finder Data library so you can upload the file there.</p>'
-       +'<div class="ebrow"><button class="ebtn ghost" type="button" data-add-res>+ Add a resource</button>'
-       +'<button class="ebtn '+(pending>0?'primary':'ghost')+'" type="button" data-publish>Publish</button>'
-       +(FS_OK?'<button class="ebtn ghost" type="button" data-setup-save>Set up direct save (one time)</button>':'')
-       +pb+'</div></div>';
-    return '<div class="editbar"><p><b>Edit mode.</b> Click <b>&#9998; Edit</b> on any card to change it. Publishing takes a one-time setup: click <b>Set up direct save</b> and select the existing ctls-data.json in your synced Finder Data folder.</p>'
-     +'<div class="ebrow"><button class="ebtn ghost" type="button" data-add-res>+ Add a resource</button>'
-     +'<button class="ebtn '+(pending>0?'primary':'ghost')+'" type="button" data-setup-save>Set up direct save (one time)</button>'
-     +pb+'</div></div>'; }
-  // Post-apply banner. With direct save wired it reports the auto-save result;
-  // otherwise it is the visible "step 2" nudge with the Publish button right there.
+      return '<div class="editbar">'
+       +'<div class="ebhead"><p class="t"><b>Edit mode.</b> Click <b>&#9998; Edit</b> on any card. This browser cannot publish on its own, so when you are done click <b>Publish</b>: it downloads your changes and opens the Finder Data library to upload them to.</p>'+stateChip()+'</div>'
+       +'<div class="ebrow"><button class="ebtn primary" type="button" data-add-res>+ Add a resource</button>'
+       +(pending>0?'<button class="ebtn primary" type="button" data-publish>Publish</button>':'')
+       +'</div></div>';
+    return '<div class="editbar">'
+     +'<div class="ebhead"><p class="t"><b>Edit mode.</b> Click <b>&#9998; Edit</b> on any card. Before anything can go live, publishing needs turning on once <b>on this computer</b>.</p>'+stateChip()+'</div>'
+     +'<div class="ebrow"><button class="ebtn primary" type="button" data-setup-save>Turn on publishing (one time)</button>'
+     +'<button class="ebtn ghost" type="button" data-add-res>+ Add a resource</button>'
+     +'</div></div>'; }
+
+  /* Post-save message. Prose only: every action lives in editBar, so a screen reader
+     never hears the same button name twice on one screen.
+     Dismiss hides THIS message, not the fact underneath it. The old Dismiss set
+     state.saved = null, which silently disarmed confirmPublish (both its outcomes are
+     guarded on state.saved), so the one warning that tells an editor her work is stuck
+     could be switched off by tidying away an unrelated success banner. */
   function savedBar(){
     if(!state.saved) return '';
-    var head = state.saved.title ? '<b>&#10003; "'+esc(state.saved.title)+'" '+state.saved.action+'.</b> ' : '<b>&#10003; Saved.</b> ';
-    if(state.saved.sync==='trying')
-      return '<div class="savedbar" role="status"><p class="msg">'+head+'Saving to the shared folder&hellip;</p></div>';
-    if(state.saved.sync==='written')
-      return '<div class="savedbar" role="status"><p class="msg">'+head+'Saved to the shared Finder Data folder. Publishing runs on its own &mdash; watching for it to appear on the live site (a minute or two). You can keep editing; leaving this page is fine too.</p></div>';
-    if(state.saved.sync==='unconfirmed')
-      return '<div class="savedbar" role="alert"><p class="msg"><b>&#9888; Saved, but it has not appeared on the live site.</b> Your change is still safely held here and will be offered back next time you open the editor. <b>Please do not save again</b> &mdash; that can make it harder to sort out. Tell CTLS@rdpolytech.ca (mention which card you edited) and they will get it published.</p>'
-       +'<button class="ebtn ghost" type="button" data-dismiss-saved>Dismiss</button></div>';
-    if(state.saved.sync==='ok')
-      return '<div class="savedbar" role="status"><p class="msg">'+head+'It is now <b>live on the site</b>. Nothing else to do.</p>'
-       +'<button class="ebtn ghost" type="button" data-dismiss-saved>Dismiss</button></div>';
-    if(state.saved.sync==='fail')
-      return '<div class="savedbar" role="status"><p class="msg">'+head+'It could not be saved to the shared folder automatically. Try again, or click Change save location if it is pointing at the wrong place.'+(pubOK()?' Or click Publish to download and upload it yourself.':'')+'</p>'
-       +'<button class="ebtn primary" type="button" data-save-folder>Save to the shared folder</button>'
-       +'<button class="ebtn ghost" type="button" data-setup-save>Change save location</button>'
-       +(pubOK()?'<button class="ebtn ghost" type="button" data-publish>Publish</button>':'')
-       +'<button class="ebtn ghost" type="button" data-dismiss-saved>Dismiss</button></div>';
+    var sync = state.saved.sync;
+    if(state.savedSeen===sync) return '';        // dismissed, and nothing has changed since
+    var what = state.saved.title ? '"'+esc(state.saved.title)+'" '+state.saved.action : 'Your change is saved';
+    var dis = '<button class="ebtn ghost" type="button" data-dismiss-saved>Dismiss</button>';
+    if(sync==='trying')
+      return '<div class="savedbar"><p class="msg">'+what+'. Saving&hellip;</p></div>';
+    if(sync==='written')
+      return '<div class="savedbar"><p class="msg"><b>'+what+'.</b> Publishing now: it should be live in a minute or two. You can keep editing, and closing the tab is fine. We will pick the check back up next time you open the editor.</p></div>';
+    if(sync==='unconfirmed')
+      return '<div class="savedbar warn"><p class="msg"><b>&#9888; Your work is safe, but it is not live yet.</b> We waited four minutes and it has not reached the site. Nothing is lost: it is held in this browser on this computer, and it will be offered back next time you open the editor here. <b>Do not save it again</b>, because a second copy makes it harder to sort out. Email <a href="mailto:CTLS@rdpolytech.ca?subject=Resource%20Finder%3A%20a%20change%20has%20not%20gone%20live">CTLS@rdpolytech.ca</a> and say which card you edited, and we will finish it for you.</p>'+dis+'</div>';
+    if(sync==='ok')
+      return '<div class="savedbar"><p class="msg"><b>'+what+'.</b> It is now <b>live on the site</b>. Nothing else to do.</p>'+dis+'</div>';
+    if(sync==='fail'){
+      // A NotFoundError/InvalidStateError write clears saveHandle (the target was moved,
+      // renamed or unsynced), which sends editBar back to its "Turn on publishing" branch.
+      // So the button this message points at depends on whether the handle survived. Naming
+      // a button that is not on the screen is precisely the failure this rework exists to end.
+      var lost = !(FS_OK && saveHandle);
+      var next = lost
+        ? 'We have lost track of where to save. Click <b>Turn on publishing</b> above and pick the ctls-data.json in your synced Finder Data folder again.'
+        : 'Use the <b>Try saving again</b> button above.'+(pubOK()?' Or click Publish to download the file and upload it yourself.':'');
+      return '<div class="savedbar warn"><p class="msg"><b>'+what+' here, but publishing did not work.</b> Your change is safe on this page and it is backed up. '+next+' If it keeps failing, email <a href="mailto:CTLS@rdpolytech.ca">CTLS@rdpolytech.ca</a>.</p>'+dis+'</div>'; }
+    // sync === null: nothing auto-saved, because publishing is not turned on here.
     if(pubOK())
-      return '<div class="savedbar" role="status"><p class="msg">'+head+'Step 2: click Publish to send this live. You can keep editing other cards first; one Publish carries all your changes.</p>'
-       +'<button class="ebtn primary" type="button" data-publish>Publish</button>'
-       +(FS_OK?'<button class="ebtn ghost" type="button" data-setup-save>Set up direct save (skips this step)</button>':'')
-       +'<button class="ebtn ghost" type="button" data-dismiss-saved>Dismiss</button></div>';
-    return '<div class="savedbar" role="status"><p class="msg">'+head+'Step 2: set up direct save to send this live &mdash; one-time setup, and it carries all the changes you have applied.</p>'
-     +'<button class="ebtn primary" type="button" data-setup-save>Set up direct save (one time)</button>'
-     +'<button class="ebtn ghost" type="button" data-dismiss-saved>Dismiss</button></div>'; }
+      return '<div class="savedbar"><p class="msg"><b>'+what+' on this page.</b> It is not public yet. Click <b>Publish</b> above when you are ready. You can edit other cards first, and one Publish carries them all.</p>'+dis+'</div>';
+    return '<div class="savedbar"><p class="msg"><b>'+what+' on this page.</b> It is not public yet. Turn on publishing (the button above) and it will go live, along with anything else you have changed.</p>'+dis+'</div>'; }
   // The live catalogue could not be fetched, so what is on screen is the baked-in
   // snapshot and may be months out of date. Say so plainly rather than quietly
   // serving stale content, and explain why editing is off.
@@ -950,13 +1020,19 @@
     if(!staleFallback) return '';
     return '<div class="editbar" role="status"><p><b>&#9888; Showing an offline copy.</b> The live catalogue could not be loaded, so this page is showing a saved snapshot that may be out of date. '
       +(hasEditFlag()?'Editing is turned off here on purpose: saving from a stale copy would overwrite other people&#39;s published changes. Reload the page, and if it keeps happening tell CTLS@rdpolytech.ca.':'Reload the page to try again.')+'</p></div>'; }
-  // Offer to bring back changes that were applied in an earlier visit but never downloaded.
+  // Offer to bring back changes applied in an earlier visit that we never saw reach the site.
+  // The old copy asserted, as fact, that they "never reached the live site". It cannot know
+  // that at render time: dropRestoreIfAlreadyLive() only finds out AFTER the fetch resolves,
+  // and per confirmPublish's note the normal, entirely successful path is an editor who saves
+  // and closes the tab. So the happy path opened with a banner claiming her work was lost.
+  // Claim only what we know: we did not get to confirm it.
   function restoreBar(){
     if(!state.restore) return '';
+    var n=state.restore.n, one=(n===1);
     var when=''; try{ if(state.restore.when){ when=' on '+new Date(state.restore.when).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}); } }catch(e){}
-    return '<div class="restorebar" role="status"><p class="msg"><b>Unfinished changes found.</b> You made '+state.restore.n+' change'+(state.restore.n===1?'':'s')+' here'+when+' that never reached the live site. Bring '+(state.restore.n===1?'it':'them')+' back?</p>'
-     +'<button class="ebtn primary" type="button" data-restore>Restore</button>'
-     +'<button class="ebtn ghost" type="button" data-discard-restore>Discard them</button></div>'; }
+    return '<div class="restorebar"><p class="msg"><b>Changes from your last visit.</b> You made '+n+' change'+(one?'':'s')+' here'+when+', and we did not get to confirm '+(one?'it':'they')+' went live. We are checking now. If '+(one?'it is':'they are')+' already on the site this will disappear on its own.</p>'
+     +'<button class="ebtn primary" type="button" data-restore>Bring '+(one?'it':'them')+' back</button>'
+     +'<button class="ebtn ghost" type="button" data-discard-restore>Discard</button></div>'; }
 
   // Row ops re-render the form but hold the scroll position and move focus
   // somewhere sensible, so working at the bottom of the form never jumps to the top.
@@ -1002,14 +1078,23 @@
     // free, because mergePreserving() copies every key not in FORM_KEYS. Seeded from
     // the title once, then frozen -- later renames never touch it.
     if(!done){ if(!store.id) store.id=mintId(store.title); D.resources.push(store); recordExpectation(null, store); }
+    // The restore OFFER and this session's backup shared one localStorage key, so the
+    // savePendingLocal() below used to destroy an unanswered offer outright -- and then a
+    // later "Discard" would delete THIS session's backup instead of the old one, because by
+    // then the key held her new work. Park the offer under its own key and take it off screen:
+    // by editing, she has moved on. It stays recoverable by hand if anyone ever needs it.
+    if(state.restore){
+      try{ localStorage.setItem(LS_PREV, JSON.stringify(state.restore)); }catch(e){}
+      state.restore=null; }
     pending++; savePendingLocal();
     var direct = FS_OK && !!saveHandle;
+    state.savedSeen=null;   // a new save: any earlier Dismiss no longer applies
     state.saved={title:store.title, action:orig?'updated':'added', sync:direct?'trying':null};
     state.editCtx=null; state.view='topic'; state.topic=store.topic; state.q='';
     var tp=topicByName(store.topic); if(history.replaceState) history.replaceState(null,'', tp&&tp.id?'#/topic/'+tp.id:'#/');
     render(); reveal(store.title);
     if(direct){ saveToFolder(); }
-    else if(live) live.textContent=(orig?'Updated "':'Added "')+store.title+'". '+(pubOK()?'Click Publish when ready.':'Set up direct save to send it live.'); }
+    else if(live) live.textContent='Saved "'+store.title+'" on this page. '+(pubOK()?'Click Publish to send it live.':'Turn on publishing to send it live.'); }
   // _meta is automation-owned: rev counts published versions. Saves carry it
   // through and record baseRev = the rev this page loaded, so the merge bot can
   // three-way merge concurrent editors instead of last-write-wins.
@@ -1061,9 +1146,17 @@
         return true; })
       .catch(function(){ return false; }); }
   // GitHub Pages typically redeploys within ~2 min; give it 4 before crying wolf.
-  var CONFIRM_TRIES=12, CONFIRM_EVERY=20000;
+  var CONFIRM_TRIES=12, CONFIRM_EVERY=20000, confirmTimer=null;
   function confirmPublish(){
     var n=0;
+    // publishedYet() returns false forever on an empty expectation, so polling one could only
+    // ever end in the red "it never reached the site, email CTLS" alarm. That is what a brand
+    // new editor used to get four minutes after doing the one-time setup exactly as told, and
+    // what anyone got for pressing Save a second time to be sure (a successful publish resets
+    // sessionExpect). There is nothing to wait for, so do not wait.
+    var any=false, k; for(k in sessionExpect){ if(Object.prototype.hasOwnProperty.call(sessionExpect,k)) any=true; }
+    if(!any){ clearPendingLocal(); if(state.saved) state.saved.sync='ok'; render({keepScroll:true}); return; }
+    clearTimeout(confirmTimer);   // one poll loop, not one per save
     function tick(){
       n++;
       publishedYet().then(function(ok){
@@ -1073,17 +1166,18 @@
           render({keepScroll:true});
           if(live) live.textContent='Your change is now live on the site.';
           return; }
-        if(n<CONFIRM_TRIES){ setTimeout(tick, CONFIRM_EVERY); return; }
+        if(n<CONFIRM_TRIES){ confirmTimer=setTimeout(tick, CONFIRM_EVERY); return; }
         // Never reached the site. Keep the change and the backup; tell them plainly.
         if(state.saved) state.saved.sync='unconfirmed';
+        state.savedSeen=null;   // this one must be seen, even if an earlier message was dismissed
         render({keepScroll:true});
         if(live) live.textContent='Your change was saved but has not appeared on the live site. It is still saved here. Do not save again; tell CTLS@rdpolytech.ca.'; });
     }
-    setTimeout(tick, CONFIRM_EVERY); }
+    confirmTimer=setTimeout(tick, CONFIRM_EVERY); }
 
   // Applied-but-not-published changes are mirrored to localStorage so a closed tab,
   // a crash, or a save that never reaches the site can offer them back next visit.
-  var pending=0, LS_KEY='rf-unsent-changes';
+  var pending=0, LS_KEY='rf-unsent-changes', LS_PREV='rf-unsent-changes:prev';
   // The expectation rides along with the backup: the confirm loop only lives as long as
   // the tab does, and an editor who saves and immediately closes the tab is the normal
   // case. Without this, their perfectly-published change would still be sitting in the
@@ -1094,14 +1188,41 @@
   function checkRestore(){ if(!state.edit || pending>0) return;
     try{ var raw=localStorage.getItem(LS_KEY); if(!raw) return; var st=JSON.parse(raw);
       if(st && st.n>0 && st.data) state.restore=st; }catch(e){} }
-  // Before offering a restore, make sure it is not already published. Backups written
-  // before this existed carry no expectation; those still get offered, as before.
+  /* A legacy backup (written before `expect` existed) records the whole catalogue but not
+     WHICH card was changed, so publishedYet() has nothing to check and the old code simply
+     gave up and offered it forever. One such backup was sitting on the live site: it claimed
+     an unpublished change from two days earlier, every resource in it was already identical
+     to the live catalogue, and it could never clear itself.
+     We can still answer the question, because the editor can only ever change RESOURCES. If
+     every resource in the backup already matches the live one, there is nothing of hers to
+     bring back. Compare only the fields the backup carries: the live record may have grown
+     fields since (every resource gained an `id` in rev 8), and that is not her change. */
+  function legacyRestoreSpent(st){
+    var mine = st && st.data && st.data.resources;
+    if(!window.fetch || !mine || !mine.length) return Promise.resolve(false);
+    return fetch('ctls-data.json',{cache:'no-store'})
+      .then(function(r){ return r.ok?r.text():null; })
+      .then(function(t){
+        if(t==null) return false;
+        var o; try{ o=JSON.parse(t); }catch(e){ return false; }
+        var byT={}; (o.resources||[]).forEach(function(r){ if(r&&r.title) byT[r.title]=r; });
+        for(var i=0;i<mine.length;i++){
+          var lr=byT[mine[i].title];
+          if(!lr) return false;                       // a card of hers is not live: real work
+          for(var k in mine[i]){ if(!Object.prototype.hasOwnProperty.call(mine[i],k)) continue;
+            if(JSON.stringify(lr[k])!==JSON.stringify(mine[i][k])) return false; } }
+        return true; })
+      .catch(function(){ return false; }); }
+  // Before offering a restore, make sure it is not already published.
   function dropRestoreIfAlreadyLive(){
-    if(!state.restore || !state.restore.expect) return;
-    publishedYet(state.restore.expect).then(function(ok){
-      if(!ok) return;
+    if(!state.restore) return;
+    var st=state.restore;
+    (st.expect ? publishedYet(st.expect) : legacyRestoreSpent(st)).then(function(ok){
+      // Re-check state.restore: the editor may have clicked Restore while the fetch was in
+      // flight, and clearing the backup underneath her would leave her work with no net.
+      if(!ok || state.restore!==st) return;
       clearPendingLocal(); state.restore=null; render({keepScroll:true});
-      if(live) live.textContent='Your last change had already gone live, so there is nothing to restore.'; }); }
+      if(live) live.textContent='Those changes were already live, so there was nothing to bring back.'; }); }
 
   /* ---- direct save into the OneDrive-synced "Finder Data" folder ----
      The SharePoint library is the publish gate: its permissions decide who may
@@ -1165,40 +1286,68 @@
       try{ h=await window.showSaveFilePicker(opts); }
       catch(e){ if(e && e.name==='AbortError') throw e;
         delete opts.startIn; h=await window.showSaveFilePicker(opts); }
-      // Guard against the classic miss: picking a brand-new file (e.g. in
-      // Downloads) instead of the existing ctls-data.json in the synced Finder
-      // Data folder. A save-picker target that already has content is the real
-      // shared file; a zero-byte one was just created by the picker itself.
-      // A brand-new file is zero bytes; but an old ctls-data.json left in Downloads by
-      // the retired Publish flow is neither empty nor misnamed, so also require the
-      // picked file to actually PARSE as the catalogue. That still cannot tell a stale
-      // copy from the synced one (same shape), which is why the name check stays and
-      // why "Change save location" exists.
+      /* Guard against the classic miss: pointing this at something that is not the synced
+         shared file. Everything then LOOKS fine forever -- we write, we report "saved", and
+         the live site never changes.
+
+         The old checks were shape-only (not empty, parses, has a resources list, named
+         ctls-data.json) and its own comment conceded they "cannot tell a stale copy from the
+         synced one". They cannot, but we can: a stale ctls-data.json in Downloads -- left by
+         the retired Publish flow, under exactly that name -- is an OLDER VERSION of the same
+         document, and every version is stamped. So compare it with what we are serving:
+
+           - canon-identical to the live file  -> this IS the shared file. Silent pass.
+           - carries an older _meta.rev        -> an old copy. Name the two versions.
+           - no _meta.rev at all               -> not the catalogue we publish (the offline
+                                                  fallback carries none, by design).
+           - same rev, different content       -> not the file the site is serving.
+
+         canon() already strips everything automation owns (rev, counts), so a freshly synced
+         file still matches the live one even though the bot has rewritten parts of it. */
       var badPick='';
       try{
         var f=await h.getFile();
-        if(f.size===0) badPick='it is empty, so it is a brand-new file';
-        else { var txt=await f.text(); var parsed=JSON.parse(txt);
-          if(!parsed || !Array.isArray(parsed.resources)) badPick='it does not look like the catalogue (no resource list inside)'; }
+        if(f.size===0) badPick='it is empty, so the picker just created it. This is a brand-new file, not the shared one';
+        else {
+          var txt=await f.text(), parsed=JSON.parse(txt);
+          if(!parsed || !Array.isArray(parsed.resources)) badPick='there is no resource list inside, so it is not the catalogue';
+          else if(knownRaws.indexOf(canon(txt))<0){
+            var theirRev=(parsed._meta||{}).rev, ourRev=(D._meta||{}).rev;
+            if(typeof theirRev!=='number') badPick='it has no version stamp, so it is not the file the site publishes from';
+            else if(typeof ourRev==='number' && theirRev<ourRev)
+              badPick='it is an older copy. It is version '+theirRev+', and the site is on version '+ourRev+'. Most likely it is a leftover download rather than the synced file';
+            else badPick='its contents do not match the catalogue the site is serving';
+          }
+        }
       }catch(e){ badPick='it could not be read as the catalogue ('+((e&&e.name)||'error')+')'; }
       if(badPick || h.name!=='ctls-data.json'){
-        if(!confirm('That does not look like the shared ctls-data.json'+(h.name!=='ctls-data.json'?' (you picked "'+h.name+'")':'')+(badPick?':\n\n'+badPick:'')+'.\n\nDirect save only publishes if you select the existing ctls-data.json inside your synced Finder Data folder. Saving anywhere else changes nothing on the live site.\n\nKeep this location anyway?')){
-          if(live) live.textContent='Save location not changed. In the SharePoint Finder Data library click Sync first, then choose Change save location and select the existing ctls-data.json in that synced folder.';
+        if(!confirm('That is not the shared catalogue file'+(h.name!=='ctls-data.json'?' (you picked "'+h.name+'")':'')+':\n\n'+(badPick||'it is not named ctls-data.json')+'.\n\nIf you keep it, your changes will be written to that file and NOTHING will ever appear on the live site.\n\nClick Cancel, then pick the file called ctls-data.json inside your synced Finder Data folder.\n\nKeep this file anyway?')){
+          if(live) live.textContent='Nothing changed. Pick the ctls-data.json inside your synced Finder Data folder. If that folder is not on this computer yet, open the Finder Data library in SharePoint and click Sync first, or email CTLS@rdpolytech.ca for help.';
           return; } }
       saveHandle=h; try{ await idbSet('save-handle',h); }catch(e){}
-      await saveToFolder();
+      // Setting up is not saving. The old code always wrote here, so a brand-new editor who
+      // had changed nothing still started a publish check with nothing to check for, and got
+      // the red "it never reached the site" alarm four minutes later. Only save if there is
+      // something to save.
+      if(pending>0){ await saveToFolder(); return; }
+      render({keepScroll:true});
+      if(live) live.textContent='Publishing is turned on for this computer. Editing a card and saving it will now put it on the live site.';
     }catch(e){ if(e && e.name==='AbortError'){ if(live) live.textContent='Direct save was left as it was.'; }
       else { if(live) live.textContent='Direct save setup did not complete. You can try again'+(pubOK()?', or use Publish.':'.'); } }
   }
   async function saveToFolder(){
     if(!saveHandle) return setupDirectSave();
+    // Nothing to save. Writing anyway would re-trigger the whole publish pipeline for no
+    // change, and start a publish check with no expectation, which can only end in the false
+    // "it never reached the site" alarm.
+    if(pending===0){ if(live) live.textContent='Everything is saved already. There is nothing waiting to go live.'; return true; }
     try{
       var p=await saveHandle.queryPermission({mode:'readwrite'});
       if(p!=='granted') p=await saveHandle.requestPermission({mode:'readwrite'});
       if(p!=='granted'){
         if(state.saved) state.saved.sync='fail';
         render({keepScroll:true});
-        if(live) live.textContent='The browser needs permission to write the shared file. Click Save to the shared folder to grant it.';
+        if(live) live.textContent='The browser needs your permission to save the file. Click Try saving again, and choose Allow.';
         return false; }
       if(await liveIsUnknown()){
         if(!confirm('The published data changed while this page was open (another editor likely saved). Saving now would overwrite their change with what you see here. Save anyway?')){
@@ -1210,7 +1359,7 @@
       // confirmPublish() clears the backup once the change is actually visible live.
       if(state.saved) state.saved.sync='written'; else state.saved={title:null,action:null,sync:'written'};
       render({keepScroll:true});
-      if(live) live.textContent='Saved to the shared folder. Checking that it reaches the live site.';
+      if(live) live.textContent='Saved. Publishing now, and checking that it reaches the live site.';
       confirmPublish();
       return true;
     }catch(e){
@@ -1218,7 +1367,9 @@
       if(e && (e.name==='NotFoundError'||e.name==='InvalidStateError')){ saveHandle=null; idbDel('save-handle').catch(function(){}); }
       if(state.saved) state.saved.sync='fail';
       render({keepScroll:true});
-      if(live) live.textContent='Could not write to the shared folder ('+((e&&e.name)||'error')+'). '+(pubOK()?'Use Publish instead.':'Try Change save location, or tell CTLS@rdpolytech.ca.');
+      // The exception name is for us, not for her. Log it; say something she can act on.
+      if(window.console&&console.warn) console.warn('saveToFolder failed:', e);
+      if(live) live.textContent='Publishing did not work, but your change is safe on this page. '+(pubOK()?'Use Publish instead.':'Click Try saving again. If it keeps failing, email CTLS@rdpolytech.ca.');
       return false;
     }
   }
@@ -1426,13 +1577,28 @@
     if(e.target.closest('[data-publish]')){ publishData(); return; }
     if(e.target.closest('[data-save-folder]')){ saveToFolder(); return; }
     if(e.target.closest('[data-setup-save]')){ setupDirectSave(); return; }
-    if(e.target.closest('[data-dismiss-saved]')){ state.saved=null; render({keepScroll:true}); return; }
+    // Dismiss hides the MESSAGE, never the state. Setting state.saved=null (as this used to)
+    // also disarmed confirmPublish, whose outcomes are both guarded on state.saved existing:
+    // tidying away a success banner could permanently suppress the later warning that the
+    // work never went live. Record which message was dismissed; a change of state re-shows it.
+    if(e.target.closest('[data-dismiss-saved]')){ state.savedSeen = state.saved && state.saved.sync; render({keepScroll:true}); return; }
     if(e.target.closest('[data-restore]')){
-      if(pending>0 && !confirm('Restoring will replace the changes you made in this visit. Continue?')) return;
+      if(pending>0 && !confirm('This replaces the changes you have made in this visit. Continue?')) return;
       var st=state.restore; state.restore=null;
-      if(st&&st.data){ for(var k in st.data){ if(Object.prototype.hasOwnProperty.call(st.data,k)) D[k]=st.data[k]; } pending=st.n||0; savePendingLocal(); }
-      render(); if(live) live.textContent='Earlier changes restored. '+(pubOK()?'Click Publish when you are ready to send them.':'Save to the shared folder when you are ready to send them.'); return; }
-    if(e.target.closest('[data-discard-restore]')){ state.restore=null; clearPendingLocal(); render({keepScroll:true}); return; }
+      if(st&&st.data){ for(var k in st.data){ if(Object.prototype.hasOwnProperty.call(st.data,k)) D[k]=st.data[k]; } pending=st.n||0;
+        // Carry the expectation back too. Without it the restored work has nothing to check
+        // against, so its publish check could only ever end in the false "not live" alarm.
+        if(st.expect) sessionExpect=st.expect;
+        savePendingLocal(); }
+      render(); if(live) live.textContent='Those changes are back on the page. Save them when you are ready.'; return; }
+    // Discards the OFFER. Since applyEdit now parks an unanswered offer under its own key,
+    // this button can only be reached before anything has been applied this visit, so the
+    // backup and the offer are the same thing. The guard keeps that true if that ever changes.
+    if(e.target.closest('[data-discard-restore]')){
+      if(!confirm('Throw those changes away? They cannot be brought back.')) return;
+      state.restore=null;
+      if(pending===0) clearPendingLocal(); else { try{ localStorage.removeItem(LS_PREV); }catch(e2){} }
+      render({keepScroll:true}); return; }
     if(e.target.closest('[data-errjump]')){ var eb=document.getElementById('editerrs'); if(eb) eb.scrollIntoView({behavior:'smooth',block:'center'}); return; }
     var ar=e.target.closest('[data-addrow]'); if(ar){ addRow(ar.getAttribute('data-addrow')); return; }
     var dr=e.target.closest('[data-delrow]'); if(dr){ delRow(dr); return; }
@@ -1472,10 +1638,15 @@
     var mini=document.getElementById('editerrs-mini'); if(mini) mini.innerHTML=miniErrs(errs);
     paintFieldErrs(errs);
   });
-  // Last line of defence: warn before the tab closes on a dirty draft or
-  // applied changes that were never downloaded.
+  // Last line of defence: warn before the tab closes on a dirty draft, or on work that has
+  // not been written anywhere yet.
+  // Do NOT warn once the file is written ('written'/'ok'): the save has happened, the publish
+  // runs without us, and the backup is held until it is seen live. The bar tells her closing
+  // the tab is fine, so the browser must not then tell her it is not.
   window.addEventListener('beforeunload',function(e){
-    if((state.editCtx && draftDirty()) || pending>0){ e.preventDefault(); e.returnValue=''; }
+    var sync = state.saved && state.saved.sync;
+    var settled = sync==='written' || sync==='ok';
+    if((state.editCtx && draftDirty()) || (pending>0 && !settled)){ e.preventDefault(); e.returnValue=''; }
   });
 
   // Edit mode is switched on only by opening the page with ?edit in the URL
