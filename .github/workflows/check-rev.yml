@@ -28,39 +28,63 @@ jobs:
           fetch-depth: 0
 
       - name: ctls-data.json changed, so _meta.rev must have increased
+        env:
+          BEFORE: ${{ github.event.before }}
         run: |
           python3 - <<'PY'
-          import json, subprocess, sys
+          import json, os, subprocess, sys
+
+          # The invariant is PER COMMIT: any commit whose ctls-data.json differs from its
+          # parent's must carry a higher _meta.rev. So check every commit this push added,
+          # not just the tip. The old version compared HEAD against HEAD~1, which quietly
+          # checked the wrong pair whenever the data change was not the last commit in a
+          # multi-commit push: it compared two commits that had not touched the file at all,
+          # saw "rev 7 -> 7", and failed a push whose rev bump was perfectly correct.
+          # A guard that cries wolf is a guard people learn to ignore, and this one is the
+          # only thing standing between a hand edit and a silently reverted save.
+
+          def sh(*args):
+              return subprocess.run(args, capture_output=True, text=True).stdout.strip()
 
           def rev_at(ref):
+              r = subprocess.run(["git", "show", "%s:ctls-data.json" % ref],
+                                 capture_output=True, text=True)
+              if r.returncode != 0:
+                  return None                       # file did not exist at that commit
               try:
-                  blob = subprocess.run(
-                      ["git", "show", "%s:ctls-data.json" % ref],
-                      capture_output=True, text=True, check=True).stdout
-              except subprocess.CalledProcessError:
-                  return None          # file did not exist yet
-              try:
-                  return json.loads(blob).get("_meta", {}).get("rev")
+                  return json.loads(r.stdout).get("_meta", {}).get("rev")
               except json.JSONDecodeError:
                   print("::error::ctls-data.json at %s is not valid JSON" % ref)
                   sys.exit(1)
 
-          new = rev_at("HEAD")
-          old = rev_at("HEAD~1")
+          before = os.environ.get("BEFORE", "")
+          empty = set("0")
+          if not before or set(before) <= empty or sh("git", "cat-file", "-t", before) != "commit":
+              commits = [sh("git", "rev-parse", "HEAD")]        # new branch, or unknown base
+          else:
+              commits = sh("git", "rev-list", "--reverse", "%s..HEAD" % before).split()
 
-          if new is None:
-              print("::error::ctls-data.json has no _meta.rev. Every published version needs one.")
-              sys.exit(1)
-          if old is None:
-              print("first version of the file (rev %s) - nothing to compare" % new)
-              sys.exit(0)
-          if new > old:
-              print("rev %s -> %s, good" % (old, new))
-              sys.exit(0)
+          failed = False
+          for c in commits:
+              # did THIS commit touch the data file?
+              if not sh("git", "diff", "--name-only", "%s^!" % c, "--", "ctls-data.json"):
+                  continue
+              new = rev_at(c)
+              old = rev_at("%s^" % c)
+              short = c[:7]
+              if new is None:
+                  print("::error::%s: ctls-data.json has no _meta.rev. Every published version needs one." % short)
+                  failed = True
+              elif old is None:
+                  print("%s: first version of the file (rev %s) - nothing to compare" % (short, new))
+              elif new > old:
+                  print("%s: rev %s -> %s, good" % (short, old, new))
+              else:
+                  print("::error::%s: ctls-data.json changed but _meta.rev did not increase "
+                        "(%s -> %s). Two commits sharing a rev break baseRev resolution: the "
+                        "next editor save can silently revert this change. Bump _meta.rev and "
+                        "push again." % (short, old, new))
+                  failed = True
 
-          print("::error::ctls-data.json changed but _meta.rev did not increase "
-                "(%s -> %s). Two commits sharing a rev break baseRev resolution: the "
-                "next editor save can silently revert this change. Bump _meta.rev and "
-                "push again." % (old, new))
-          sys.exit(1)
+          sys.exit(1 if failed else 0)
           PY
