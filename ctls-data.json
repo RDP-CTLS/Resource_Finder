@@ -1163,6 +1163,90 @@
      "note": "build it with the CTLS template"
     }
    ]
+  },
+  {
+   "id": "build-a-course",
+   "label": "Build a course from scratch",
+   "intro": "The order to do it in: the design lens, then the outcome, then the thing you mark it with.",
+   "steps": [
+    {
+     "res": "A Process for Getting Started: Universal Design for Learning (UDL)",
+     "note": "design for the whole class before you design for the average one"
+    },
+    {
+     "res": "Bloom's Taxonomy Cognitive Domain",
+     "note": "pick the level, then the verb the outcome will use"
+    },
+    {
+     "res": "Alignment Between Assessments and Outcomes",
+     "note": "check the assessment actually measures the outcome you wrote"
+    },
+    {
+     "res": "Rubrics: Purposes and Rationale",
+     "note": "build the thing you will mark it with, before you have to mark it"
+    },
+    {
+     "res": "Delivering Planning Checklist",
+     "note": "the last pass before the course goes live"
+    }
+   ]
+  },
+  {
+   "id": "new-instructor",
+   "label": "Find my feet as a new instructor",
+   "intro": "The vocabulary the rest of this assumes, a design lens to start with, and the one document you will be asked for later.",
+   "steps": [
+    {
+     "res": "What is Pedagogy?",
+     "note": "the vocabulary everything else here takes for granted"
+    },
+    {
+     "res": "A Process for Getting Started: Universal Design for Learning (UDL)",
+     "note": "a six-step cycle you can start applying to one lesson this week"
+    },
+    {
+     "res": "Teaching Philosophy",
+     "note": "start a draft now; you will need it at continuous appointment"
+    }
+   ]
+  },
+  {
+   "id": "design-for-every-student",
+   "label": "Design for every student in the room",
+   "intro": "Accessibility and trauma-informed practice built in at the design stage, rather than retrofitted when someone is already struggling.",
+   "steps": [
+    {
+     "res": "A Process for Getting Started: Universal Design for Learning (UDL)",
+     "note": "build the flexibility in up front"
+    },
+    {
+     "res": "Trauma Informed Pedagogy",
+     "note": "why some students disengage, and what lowers the load without lowering the bar"
+    },
+    {
+     "res": "Trauma Responsive Online and LMS Course Design and Teaching",
+     "note": "the same thinking, applied to the course shell"
+    }
+   ]
+  },
+  {
+   "id": "cut-grading-time",
+   "label": "Cut my grading time",
+   "intro": "Most slow marking was designed in long before the marking started.",
+   "steps": [
+    {
+     "res": "Alignment Between Assessments and Outcomes",
+     "note": "a lot of slow marking is an assessment that was never aimed at the outcome"
+    },
+    {
+     "res": "Rubrics: Purposes and Rationale",
+     "note": "the biggest lever: decide what you are looking for before you look"
+    },
+    {
+     "res": "Authentic Assessment: Purposes and Rationale",
+     "note": "tasks worth marking, and harder to fake"
+    }
+   ]
   }
  ],
  "glossary": [

@@ -129,6 +129,28 @@
   .modetab:not(.on):hover{color:var(--purple-deep);}
   .modetab:focus-visible{outline:2px solid var(--purple);outline-offset:2px;}
   .starthere .stepnote{color:var(--ink-soft);font-size:.88rem;}
+
+  /* ---- sharing: the "shared with you" arrival strip, and Copy link ---- */
+  .sharebar{background:var(--t-lime);border:1px solid #cfe0ae;border-left:4px solid var(--lime);
+            border-radius:0 12px 12px 0;padding:1rem 1.25rem;margin:0 0 1.4rem;max-width:44rem;}
+  .sharebar .eyebrow{color:#4f7a10;}
+  .sharebar p{margin:.3rem 0 0;font-size:.93rem;color:var(--ink);}
+  .sharebar .perm{color:var(--ink-soft);font-size:.88rem;}
+  .sharerow{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;margin-top:.8rem;}
+  .sharebtn{background:#fff;border:1.5px solid var(--line);border-radius:8px;padding:.42rem .9rem;
+            font-weight:700;font-size:.84rem;color:var(--purple-deep);cursor:pointer;transition:.13s;}
+  .sharebtn:hover{border-color:var(--purple);}
+  .sharebtn:focus-visible{outline:2px solid var(--purple);outline-offset:2px;}
+  .sharebtn.copied{background:var(--t-lime);border-color:#cfe0ae;color:#4f7a10;}
+  .sharehint{font-size:.82rem;color:var(--ink-soft);}
+  .copyfall{display:flex;flex-direction:column;gap:.3rem;max-width:32rem;}
+  .copyfall input{border:1.5px solid var(--purple);border-radius:8px;padding:.42rem .7rem;font:inherit;
+                  font-size:.82rem;color:var(--ink);background:#fff;width:100%;}
+  .copyfall span{font-size:.78rem;color:var(--ink-soft);}
+  .totaltime{font-size:.85rem;color:var(--ink-soft);margin:.85rem 0 0;}
+  .stepnum{display:inline-flex;align-items:center;justify-content:center;width:1.4rem;height:1.4rem;
+           border-radius:50%;background:var(--purple);color:#fff;font-size:.72rem;font-weight:800;
+           margin-right:.5rem;vertical-align:middle;}
   .devpanel{background:var(--amber-soft);border:1px solid #f0d9bd;border-radius:12px;padding:1.3rem 1.4rem;}
   .devpanel h3{margin:0 0 .4rem;color:var(--amber);}
   .devpanel p{margin:.3rem 0;color:#7a5a2a;font-size:.94rem;}
@@ -392,11 +414,82 @@
       return '<li><span><a href="#/res/'+slugify(title)+'" data-res="'+esc(title)+'">'+esc(title)+'</a>'+pdf+'</span></li>';
     }).join('');
     var startBlock = starts ? '<div class="starthere"><div class="k">Start here when you are short on time</div><ol>'+starts+'</ol></div>' : '';
-    var cards = live.map(resCard).join('');
+    var cards = live.map(function(r){return resCard(r);}).join('');
     return head+startBlock+provKey()+'<div style="margin-top:.9rem">'+cards+'</div>';
   }
 
   function taskById(id){var ts=D.tasks||[];for(var i=0;i<ts.length;i++){if(ts[i].id===id)return ts[i];}return null;}
+  /* ---- sharing --------------------------------------------------------------
+     Only TASKS get a share link for now. A task's id is hand-authored in the data
+     and the editor cannot create or rename tasks, so #/task/<id> can never rot.
+     Resource links still key off the title (slugify(title)), and titles DO get
+     renamed, so minting per-resource links at scale would mass-produce links that
+     break later. That waits on a stable resource id.
+     The "shared with you" strip only shows when the task WAS the entry point, i.e.
+     the page was opened on a #/task/ link. Clicking through to the same task from
+     inside the app must not claim someone sent it to you -- so the flag is one-shot:
+     the moment the reader navigates anywhere else they are browsing, not arriving,
+     and coming back to the very same task later must not re-arm the strip. (Testing
+     the hash alone is not enough: home -> back into the same task would re-match.) */
+  var entryHash = location.hash||'';
+  var arrivedByLink = /^#\/task\//.test(entryHash);
+  window.addEventListener('hashchange', function(){
+    if(arrivedByLink && location.hash !== entryHash) arrivedByLink = false;
+  });
+
+  function shareUrl(hash){ return location.origin+location.pathname+hash; }
+
+  function sharedStrip(count){
+    if(!arrivedByLink) return '';
+    return '<div class="sharebar"><div class="eyebrow">Shared with you</div>'
+      +'<p>Someone at CTLS sent you this path. '+(count>1?'The '+count+' resources below are in the order they suggest working through them.':'')+'</p>'
+      +'<p class="perm">You do not have to read anything else.</p></div>';
+  }
+
+  // Sum of readTime across a task's steps. Six PDFs sounds like a weekend; "about
+  // 21 minutes" sounds like a coffee. The number is already in the data, unused.
+  function pathTime(steps){
+    var mins=0, n=0;
+    (steps||[]).forEach(function(st){ var r=byTitle(st.res); if(r){ n++; mins += (+r.readTime||0); } });
+    if(!n) return '';
+    return '<p class="totaltime">'+n+' resource'+(n===1?'':'s')+(mins?', about '+mins+' minutes of reading in all':'')+'.</p>';
+  }
+
+  function copyBtn(hash){
+    return '<button class="sharebtn" type="button" data-copy="'+esc(hash)+'">Copy link</button>';
+  }
+
+  // Clipboard must be written synchronously inside the click handler with nothing
+  // awaited first, or iOS Safari discards the user gesture and the write fails.
+  function copyLink(hash, btn){
+    var url = shareUrl(hash);
+    var done = function(){
+      var old = btn.textContent;
+      btn.textContent = 'Link copied';
+      btn.classList.add('copied');
+      setTimeout(function(){ btn.textContent = old; btn.classList.remove('copied'); }, 2200);
+      if(live) live.textContent = 'Link copied. Paste it wherever you like.';
+    };
+    var manual = function(){
+      // No clipboard API (older Safari, or a locked-down campus browser): show the
+      // link, selected, and let them copy it themselves. Never fail into nothing.
+      var box = document.createElement('div');
+      box.className = 'copyfall';
+      box.innerHTML = '<input type="text" readonly value="'+esc(url)+'" aria-label="Link to copy">'
+        +'<span>Press Ctrl+C (Cmd+C on a Mac) to copy the link.</span>';
+      btn.parentNode.replaceChild(box, btn);
+      var inp = box.querySelector('input'); inp.focus(); inp.select();
+      if(live) live.textContent = 'Copying is blocked in this browser. The link is shown, selected, ready to copy.';
+    };
+    try {
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(url).then(done, manual);
+        return;
+      }
+    } catch(e){}
+    manual();
+  }
+
   // Task view: same skeleton as a topic (header, numbered path, cards), but the
   // sequence comes from a task's steps and cards can span topics (topic chip shown).
   function taskView(id){
@@ -404,16 +497,21 @@
     if(!t) return teacherShell();
     var head = '<button class="back" data-home>'+icon('dot',12)+' All topics</button>'
       +'<div class="topic-head"><div class="eyebrow">I&#39;m trying to</div><h2>'+esc(t.label)+'</h2>'
-      +'<p class="blurb">'+esc(t.intro||'')+'</p></div>';
+      +'<p class="blurb">'+esc(t.intro||'')+'</p>'
+      +'<div class="sharerow">'+copyBtn('#/task/'+t.id)+'<span class="sharehint">Send this path to someone</span></div></div>';
     var steps = (t.steps||[]).map(function(st){
       var rr = byTitle(st.res);
       var pdf = (rr && safeUrl(rr.url)) ? ' <a class="mini-pdf" href="'+esc(safeUrl(rr.url))+'" target="_blank" rel="noopener" aria-label="Open '+esc(st.res)+' as a PDF, in a new tab">PDF &#8599;</a>' : '';
       var note = st.note ? ' <span class="stepnote">'+esc(st.note)+'</span>' : '';
       return '<li><span><a href="#/res/'+slugify(st.res)+'" data-res="'+esc(st.res)+'">'+esc(st.res)+'</a>'+pdf+note+'</span></li>';
     }).join('');
-    var startBlock = steps ? '<div class="starthere"><div class="k">The path, in order</div><ol>'+steps+'</ol></div>' : '';
-    var cards = (t.steps||[]).map(function(st){return byTitle(st.res);}).filter(Boolean).map(resCard).join('');
-    return head+startBlock+provKey()+'<div style="margin-top:.9rem">'+cards+'</div>';
+    var startBlock = steps ? '<div class="starthere"><div class="k">The path, in order</div><ol>'+steps+'</ol>'+pathTime(t.steps)+'</div>' : '';
+    // Cards are numbered to match the stepper, so someone who scrolls past the path
+    // on a phone still knows where they are in the sequence.
+    var n = 0;
+    var cards = (t.steps||[]).map(function(st){return byTitle(st.res);}).filter(Boolean)
+      .map(function(r){ n++; return resCard(r, n); }).join('');
+    return sharedStrip((t.steps||[]).length)+head+startBlock+provKey()+'<div style="margin-top:.9rem">'+cards+'</div>';
   }
 
   function devPanel(name){
@@ -456,7 +554,10 @@
   // visibly marked as pending a Brightspace rewrite. Detection is by keyword at render time.
   function legacyLMS(s){ return /blackboard|collaborate ultra|safeassign/i.test(s||''); }
   var UPDATE_CHIP = '<span class="chip update" title="References retired Blackboard or Collaborate Ultra tools. Pending rewrite for Brightspace.">Brightspace update</span>';
-  function resCard(r){
+  // stepNum is set only from taskView, to number the cards in a path. Every other
+  // caller MUST invoke resCard through a wrapper, never bare .map(resCard), or the
+  // array index arrives here as a step number and every card silently gets numbered.
+  function resCard(r, stepNum){
     var meta = '<span class="chip read">'+icon('dot',11)+' '+esc(r.readTime||'?')+' min read</span>'
       + (r.format?'<span class="chip fmt">'+esc(r.format)+'</span>':'')
       + ((state.view==='search'||state.view==='task') && r.topic?'<span class="chip topic">'+esc(r.topic)+'</span>':'')
@@ -490,7 +591,7 @@
     var moreBlock = inner ? '<button class="expand" data-expand>Details &amp; related</button><div class="more">'+inner+'</div>' : '';
     return '<article class="rescard" data-card="'+esc(r.title)+'"><div class="body">'
       +((state.edit&&!state.editCtx)?'<button class="cardpencil" type="button" data-edit-card="'+esc(r.title)+'" aria-label="Edit '+esc(r.title)+'">&#9998; Edit</button>':'')
-      +'<h4>'+esc(r.title)+'</h4>'
+      +'<h4>'+(stepNum?'<span class="stepnum">'+stepNum+'</span>':'')+esc(r.title)+'</h4>'
       +'<div class="meta">'+meta+'</div>'
       +'<p class="one" style="margin-top:.5rem">'+esc(r.oneLine)+'</p>'
       +when
@@ -511,7 +612,7 @@
     var gs=D.glossary.filter(function(g){return g.term.toLowerCase().indexOf(ql)>=0 || (g.def||'').toLowerCase().indexOf(ql)>=0;});
     live.textContent = rs.length+' resources and '+gs.length+' terms match '+q;
     var out='<div class="topic-head"><div class="eyebrow">Search</div><h2>'+esc(rs.length)+' resource'+(rs.length===1?'':'s')+' and '+esc(gs.length)+' term'+(gs.length===1?'':'s')+' for "'+esc(q)+'"</h2></div>';
-    if(rs.length) out+= rs.map(resCard).join('');
+    if(rs.length) out+= rs.map(function(r){return resCard(r);}).join('');
     if(gs.length){ out+='<div class="secthead">Matching glossary terms'+(gs.length>12?' (showing 12 of '+gs.length+')':'')+'</div>'+gs.slice(0,12).map(glossItem).join(''); }
     if(!rs.length && !gs.length) out+='<div class="devpanel"><h3>Nothing yet</h3><p>No resource or term matched that. Try a simpler word, like "assessment", "online", or "feedback".</p></div>';
     return out;
@@ -1148,6 +1249,7 @@
     var tp=tn?topicByName(tn):null; if(history.replaceState) history.replaceState(null,'', tp&&tp.id?'#/topic/'+tp.id:'#/');
     render(); }
   document.addEventListener('click',function(e){
+    var cp=e.target.closest('[data-copy]'); if(cp){ copyLink(cp.getAttribute('data-copy'), cp); return; }
     // ---- editor actions (checked first; harmless when edit mode is off) ----
     var ec=e.target.closest('[data-edit-card]'); if(ec){ startEdit(ec.getAttribute('data-edit-card')); return; }
     if(e.target.closest('[data-add-res]')){ startEdit(null); return; }
