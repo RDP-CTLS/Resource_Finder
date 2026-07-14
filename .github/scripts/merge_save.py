@@ -40,6 +40,18 @@ EDITOR_URL = "https://rdp-ctls.github.io/Resource_Finder/?edit"
 BOT_NAME = "github-actions[bot]"
 BOT_EMAIL = "41898282+github-actions[bot]@users.noreply.github.com"
 
+# An editor save may change ONLY the catalogue file. Anything else on a save branch (a workflow,
+# a script, a stray top-level file) has no business in the publish path; a .github/ path would be a
+# CI-code-execution vector. See the path guard in main().
+ALLOWED_SAVE_PATHS = {DATA}
+
+# Floor guard against a catalogue wipe. The bot is the only writer of main and runs unattended, so a
+# save that empties the catalogue must never publish silently. These are the collections whose loss
+# means the public site was gutted; a single save that drops more than MAX_DROP_FRACTION of either
+# (or empties it outright) is treated as a truncated/emptied file and held for a human, not published.
+FLOOR_COLLECTIONS = ("resources", "topics")
+MAX_DROP_FRACTION = 0.34   # one save removing more than a third of a collection is suspect, not routine
+
 
 def sh(*args, check=True):
     r = subprocess.run(list(args), capture_output=True, text=True)
@@ -50,6 +62,19 @@ def sh(*args, check=True):
 
 def file_at(ref):
     return sh("git", "show", "%s:%s" % (ref, DATA)).stdout
+
+
+def changed_paths(sha):
+    """Repo-relative paths the save commit changed vs its OWN first parent, or None if undeterminable.
+    Compared against the commit's parent (not current main) on purpose: a stale save branch
+    legitimately carries an older copy of .github/, and diffing it against a newer main would flag
+    those files as 'changed' and block every save. A commit's diff against its parent is exactly what
+    that push introduced."""
+    r = sh("git", "diff", "--name-only", "%s^" % sha, sha, check=False)
+    if r.returncode != 0:      # e.g. a root commit with no parent; cannot tell, so do not block
+        print("could not compute changed paths for %.10s, skipping path guard" % sha)
+        return None
+    return {p for p in r.stdout.split("\n") if p.strip()}
 
 
 def resolve_base(base_rev):
@@ -106,6 +131,24 @@ def main():
         return 0
     editor = branch.split("/", 1)[-1]
     sh("git", "fetch", "origin", sha, check=False)  # ensure the commit is local
+
+    # Path guard (defense in depth): a save must touch ONLY the catalogue file. Anything else,
+    # especially a .github/ workflow or script, is refused. IMPORTANT LIMITATION: for a push to
+    # save/**, GitHub has ALREADY chosen the workflow file from the pushed branch, so a poisoned
+    # merge-saves.yml would run its own steps before this check ever executes. This guard is NOT the
+    # primary control; it catches an accidental extra file and a tampered merge_save.py when the yaml
+    # is unchanged. The real controls live outside this repo: a Contents-only, single-repo PAT that
+    # cannot write .github/ at all, and a flow that commits ctls-data.json via a single-file PUT.
+    changed = changed_paths(sha)
+    if changed is not None and changed - ALLOWED_SAVE_PATHS:
+        extra = ", ".join("`%s`" % p for p in sorted(changed - ALLOWED_SAVE_PATHS))
+        open_issue("Needs a look: a save from %s changed files other than the catalogue" % editor,
+                   issue_header(editor, branch, sha, "?", "?")
+                   + "This save touched: %s. A normal editor save changes only `%s`, so nothing was "
+                     "published. If you did not do anything unusual, tell whoever manages the repo, "
+                     "because a save branch carrying other files can mean the upload credential is "
+                     "being misused.\n" % (extra, DATA) + HOW_TO_FIX)
+        return 0
 
     try:
         theirs = json.loads(file_at(sha))
@@ -181,6 +224,25 @@ def main():
                          "reload the editor (so it starts from version %s) and make the change "
                          "again.\n" % (base_rev, main_rev, base_rev, main_rev) + HOW_TO_FIX)
             return 0
+
+        # Floor guard: never publish a save that empties or guts the catalogue. An emptied-but-valid
+        # ctls-data.json (collections present but []) merges cleanly to "delete almost everything"
+        # with zero conflicts and would otherwise be pushed straight to the live site in silence.
+        # A truncated file that happens to close as valid JSON, a mis-click bulk delete, or a base
+        # that predates most of main's content all land here. Hold it for a human instead of wiping.
+        for coll in FLOOR_COLLECTIONS:
+            was = len(main_doc.get(coll) or [])
+            now = len(merged.get(coll) or [])
+            if was and (now == 0 or (was - now) / was > MAX_DROP_FRACTION):
+                open_issue("Needs a look: a save from %s would delete most of the catalogue" % editor,
+                           issue_header(editor, branch, sha, base_rev, main_rev)
+                           + "Publishing this save would cut the **%s** list from %d to %d. That is too "
+                             "large a drop for one edit, so nothing was published, in case a truncated "
+                             "or emptied file arrived by accident. **Nothing was lost** and the live "
+                             "site is unchanged.\n\nIf you really did mean to remove that much, make the "
+                             "deletions again in the editor in smaller saves, or ask whoever manages the "
+                             "repo to publish it by hand.\n" % (coll, was, now) + HOW_TO_FIX)
+                return 0
 
         Path(DATA).write_text(json.dumps(merged, indent=1, ensure_ascii=False) + "\n",
                               encoding="utf-8")
