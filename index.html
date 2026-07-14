@@ -353,6 +353,8 @@
   var main = document.getElementById('main');
   var live = document.getElementById('live');
   // saved  = what the last save is doing (null | trying | written | ok | unconfirmed | fail).
+  //   saved.why names the cause behind 'fail' (permission | lost | write | queued) and marks
+  //   a 'trying' that is waiting behind a colleague's in-flight save ('queued').
   // savedSeen = which of those states the editor has dismissed the message for. Kept apart
   //   so dismissing a message can never erase the state it describes.
   var state = {view:'home', topic:null, task:null, q:'', ai:false, indig:false, mode:'topics', edit:false, editCtx:null, saved:null, savedSeen:null, restore:null};
@@ -988,11 +990,21 @@
   function savedBar(){
     if(!state.saved) return '';
     var sync = state.saved.sync;
-    if(state.savedSeen===sync) return '';        // dismissed, and nothing has changed since
+    // Dismissals are recorded as String(sync): sync is legitimately null when a card
+    // is saved on the page but publishing is not set up here, and a null-to-null
+    // match against the "nothing dismissed" marker hid that message before it ever
+    // showed (its two branches below were unreachable).
+    if(state.savedSeen===String(sync)) return '';   // dismissed, and nothing has changed since
     var what = state.saved.title ? '"'+esc(state.saved.title)+'" '+state.saved.action : 'Your change is saved';
     var dis = '<button class="ebtn ghost" type="button" data-dismiss-saved>Dismiss</button>';
-    if(sync==='trying')
-      return '<div class="savedbar"><p class="msg">'+what+'. Saving&hellip;</p></div>';
+    if(sync==='trying'){
+      // 'queued': a colleague's save is sitting in the synced file, not yet live.
+      // Ours waits its turn (see fileHoldsUnpublished) -- from her side that is
+      // still just "publishing", so the chip stays busy and the bar explains why
+      // it is taking a moment. No action exists, so no button appears.
+      if(state.saved.why==='queued')
+        return '<div class="savedbar"><p class="msg"><b>A colleague&#39;s change is going live first.</b> Yours is saved here and will follow on its own in a minute or two. Nothing to do.</p></div>';
+      return '<div class="savedbar"><p class="msg">'+what+'. Saving&hellip;</p></div>'; }
     if(sync==='written')
       return '<div class="savedbar"><p class="msg"><b>'+what+'.</b> Publishing now: it should be live in a minute or two. You can keep editing, and closing the tab is fine. We will pick the check back up next time you open the editor.</p></div>';
     if(sync==='unconfirmed')
@@ -1000,15 +1012,22 @@
     if(sync==='ok')
       return '<div class="savedbar"><p class="msg"><b>'+what+'.</b> It is now <b>live on the site</b>. Nothing else to do.</p>'+dis+'</div>';
     if(sync==='fail'){
-      // A NotFoundError/InvalidStateError write clears saveHandle (the target was moved,
-      // renamed or unsynced), which sends editBar back to its "Turn on publishing" branch.
-      // So the button this message points at depends on whether the handle survived. Naming
-      // a button that is not on the screen is precisely the failure this rework exists to end.
-      var lost = !(FS_OK && saveHandle);
-      var next = lost
-        ? 'We have lost track of where to save. Click <b>Turn on publishing</b> above and pick the ctls-data.json in your synced Finder Data folder again.'
-        : 'Use the <b>Try saving again</b> button above.'+(pubOK()?' Or click Publish to download the file and upload it yourself.':'');
-      return '<div class="savedbar warn"><p class="msg"><b>'+what+' here, but publishing did not work.</b> Your change is safe on this page and it is backed up. '+next+' If it keeps failing, email <a href="mailto:CTLS@rdpolytech.ca">CTLS@rdpolytech.ca</a>.</p>'+dis+'</div>'; }
+      // One cause, one remedy. The old bar collapsed every failure into one message
+      // whose loudest fix was "change the save location" -- which reopens the picker,
+      // the door to the wrong-file trap, for failures that had nothing to do with the
+      // location. `why` is set where each failure is caught; the handle check stays
+      // as the fallback because a lost handle also sends editBar back to its
+      // "Turn on publishing" branch, and the message must point at a button that is
+      // actually on the screen.
+      var why = state.saved.why || (!(FS_OK && saveHandle) ? 'lost' : 'write');
+      var mail = ' If it keeps failing, email <a href="mailto:CTLS@rdpolytech.ca">CTLS@rdpolytech.ca</a>.';
+      if(why==='queued')
+        return '<div class="savedbar warn"><p class="msg"><b>A colleague&#39;s change is still on its way to the live site</b>, so this card was not saved over it. Your change is safe here and backed up. Wait a few minutes, then click <b>Try saving again</b>.'+' If it keeps happening, email <a href="mailto:CTLS@rdpolytech.ca">CTLS@rdpolytech.ca</a>.</p>'+dis+'</div>';
+      if(why==='permission')
+        return '<div class="savedbar warn"><p class="msg"><b>The browser needs your OK to save.</b> Your change is safe on this page. Click <b>Try saving again</b> above, and choose <b>Allow</b> when the browser asks.'+mail+'</p>'+dis+'</div>';
+      if(why==='lost' || !(FS_OK && saveHandle))
+        return '<div class="savedbar warn"><p class="msg"><b>'+what+' here, but publishing did not work.</b> Your change is safe on this page and it is backed up. We have lost track of where to save. Click <b>Turn on publishing</b> above and pick the ctls-data.json in your synced Finder Data folder again.'+mail+'</p>'+dis+'</div>';
+      return '<div class="savedbar warn"><p class="msg"><b>Saving did not work this time.</b> Your change is safe on this page and it is backed up. Click <b>Try saving again</b> above.'+(pubOK()?' Or click Publish to download the file and upload it yourself.':'')+mail+'</p>'+dis+'</div>'; }
     // sync === null: nothing auto-saved, because publishing is not turned on here.
     if(pubOK())
       return '<div class="savedbar"><p class="msg"><b>'+what+' on this page.</b> It is not public yet. Click <b>Publish</b> above when you are ready. You can edit other cards first, and one Publish carries them all.</p>'+dis+'</div>';
@@ -1248,29 +1267,93 @@
     tx.oncomplete=res; tx.onerror=function(){ rej(tx.error); }; }); }); }
   function loadSaveHandle(){ if(!FS_OK) return Promise.resolve();
     return idbGet('save-handle').then(function(h){ saveHandle=h||null; }).catch(function(){}); }
-  // Published data may have moved on while this page was open (another editor
-  // saved). True when the live file matches nothing this session has seen.
-  // Compared in canonical form: the Power Automate flow re-serializes the JSON
-  // (minified), so byte comparison would flag our own change as foreign. _meta
-  // is excluded too: the merge bot bumps rev on every publish, and a rev bump
-  // alone is not a foreign content change.
+  // Comparisons are made in canonical form: the Power Automate flow re-serializes
+  // the JSON (minified), so byte comparison would flag our own change as foreign.
   // Normalize away everything AUTOMATION owns before comparing, so our own publish
   // does not read back as a stranger's. _meta.rev is bumped by the bot on every
   // publish; meta.counts and topics[].resourceCount are recomputed by it too (this
-  // page never updates them). Without stripping these, the second save of any
-  // session that added or moved a resource would falsely warn "the published data
-  // changed while this page was open... saving would overwrite their change".
+  // page never updates them).
   function canon(t){ try{ var o=JSON.parse(t); if(!o||typeof o!=='object') return t;
       delete o._meta;
       if(o.meta && typeof o.meta==='object') delete o.meta.counts;
       (o.topics||[]).forEach(function(tp){ if(tp && typeof tp==='object') delete tp.resourceCount; });
       return JSON.stringify(o); }catch(e){ return t; } }
-  function liveIsUnknown(){
-    if(!window.fetch) return Promise.resolve(false);
-    return fetch('ctls-data.json',{cache:'no-store'})
-      .then(function(r){ return r.ok?r.text():null; })
-      .then(function(t){ return t!=null && knownRaws.indexOf(canon(t))<0; })
-      .catch(function(){ return false; }); }
+  /* Guard the WRITE TARGET, not the live site. An earlier guard here fetched the
+     live catalogue and warned "another editor likely saved... saving would
+     overwrite their change" when it had moved on. That had it backwards: a change
+     that is already live has reached git, where the merge bot three-way merges
+     via baseRev -- nothing gets clobbered, so that is the safe case, and the
+     dialog fired exactly then. The genuinely dangerous window is the local synced
+     FILE holding a colleague's save that the pipeline has not committed yet:
+     overwrite the file now and her change is gone -- no branch, no merge, no
+     issue (see confirmPublish's note). So before every write, read the file back
+     and ask the only question that matters: does it hold anything unpublished?
+       - content this session has seen or written  -> no. Write.
+       - foreign content already visible live      -> committed; write, and let
+                                                      the merge bot reconcile.
+       - foreign content NOT live yet              -> a colleague's save is in
+                                                      flight. Hold ours until it
+                                                      lands, then write.
+     Reading through the handle on every save also re-validates the pick itself:
+     a moved or replaced file surfaces here instead of being trusted forever. */
+  async function fileHoldsUnpublished(){
+    var raw;
+    try{ var f=await saveHandle.getFile(); raw=await f.text(); }
+    catch(e){ return false; }   // unreadable target: let the write's own error path speak
+    var cur=canon(raw);
+    if(knownRaws.indexOf(cur)>=0) return false;
+    if(!window.fetch) return false;
+    var liveTxt=null;
+    try{ var r=await fetch('ctls-data.json',{cache:'no-store'}); if(r.ok) liveTxt=await r.text(); }catch(e){}
+    if(liveTxt==null) return false;   // cannot tell; do not block saving on a flaky fetch
+    if(canon(liveTxt)===cur){ knownRaws.push(cur); return false; }
+    // Not equivalent to live. It may still be an older, already-committed state
+    // (OneDrive catching up after someone's publish): committed iff its version
+    // stamp is not ahead of live AND nothing in it differs from the live
+    // catalogue. Editors can only change resources (a rename rewrites other
+    // sections, but the renamed title itself shows up as a missing resource
+    // here), so comparing resources field-by-field answers that.
+    try{
+      var fo=JSON.parse(raw), lo=JSON.parse(liveTxt);
+      var fr=(fo._meta||{}).rev, lr=(lo._meta||{}).rev;
+      if(typeof fr==='number' && typeof lr==='number' && fr<=lr){
+        var byT={}; (lo.resources||[]).forEach(function(x){ if(x&&x.title) byT[x.title]=x; });
+        var allLive=(fo.resources||[]).every(function(m){ var l=m&&byT[m.title]; if(!l) return false;
+          for(var k in m){ if(Object.prototype.hasOwnProperty.call(m,k) && JSON.stringify(l[k])!==JSON.stringify(m[k])) return false; }
+          return true; });
+        if(allLive){ knownRaws.push(cur); return false; }
+      }
+    }catch(e){}
+    return true; }
+  // A colleague's save is in flight; ours waits its turn, then goes on its own.
+  // One loop, never one per click: the eventual single write carries every
+  // pending change anyway, because payloadJSON() serializes all of D. While
+  // waiting, sync stays 'trying' (the chip says "Publishing...", which is true)
+  // and no save button is on screen. ~3 min covers the pipeline's normal lag.
+  var QUEUE_TRIES=9, QUEUE_EVERY=20000, queueTimer=null, queueWaiting=false;
+  function queueSave(){
+    if(queueWaiting) return;
+    queueWaiting=true;
+    if(state.saved){ state.saved.sync='trying'; state.saved.why='queued'; }
+    else state.saved={title:null,action:null,sync:'trying',why:'queued'};
+    state.savedSeen=null;
+    render({keepScroll:true});
+    if(live) live.textContent='A colleague\'s change is going live first. Yours is saved here and will follow on its own in a minute or two.';
+    var n=0;
+    function tick(){
+      fileHoldsUnpublished().then(function(busy){
+        if(!queueWaiting) return;   // a retry already took over
+        if(!busy){ queueWaiting=false; saveToFolder(); return; }
+        n++;
+        if(n<QUEUE_TRIES){ queueTimer=setTimeout(tick, QUEUE_EVERY); return; }
+        queueWaiting=false;
+        if(state.saved){ state.saved.sync='fail'; state.saved.why='queued'; }
+        else state.saved={title:null,action:null,sync:'fail',why:'queued'};
+        state.savedSeen=null;   // this one must be seen
+        render({keepScroll:true});
+        if(live) live.textContent='A colleague\'s change is still on its way to the live site, so yours was not saved over it. It is safe here. Wait a few minutes, then click Try saving again.'; });
+    }
+    queueTimer=setTimeout(tick, QUEUE_EVERY); }
   async function setupDirectSave(){
     // Re-running this any time (via "Change save location") replaces the stored
     // handle, so a save target picked before the folder was synced -- or pointed
@@ -1345,27 +1428,32 @@
       var p=await saveHandle.queryPermission({mode:'readwrite'});
       if(p!=='granted') p=await saveHandle.requestPermission({mode:'readwrite'});
       if(p!=='granted'){
-        if(state.saved) state.saved.sync='fail';
+        if(state.saved){ state.saved.sync='fail'; state.saved.why='permission'; }
+        else state.saved={title:null,action:null,sync:'fail',why:'permission'};
         render({keepScroll:true});
         if(live) live.textContent='The browser needs your permission to save the file. Click Try saving again, and choose Allow.';
         return false; }
-      if(await liveIsUnknown()){
-        if(!confirm('The published data changed while this page was open (another editor likely saved). Saving now would overwrite their change with what you see here. Save anyway?')){
-          if(state.saved) state.saved.sync='fail'; render({keepScroll:true}); return false; } }
+      // Never write over a colleague's not-yet-published save (see the note on
+      // fileHoldsUnpublished). No dialog: there is no decision for the editor to
+      // make, only a short wait the page handles itself.
+      if(await fileHoldsUnpublished()){ queueSave(); return false; }
       var text=JSON.stringify(payloadJSON(),null,1)+'\n';
       var w=await saveHandle.createWritable(); await w.write(text); await w.close();
       knownRaws.push(canon(text));
       // Deliberately NOT clearPendingLocal() here: the file is written, not published.
       // confirmPublish() clears the backup once the change is actually visible live.
-      if(state.saved) state.saved.sync='written'; else state.saved={title:null,action:null,sync:'written'};
+      if(state.saved){ state.saved.sync='written'; delete state.saved.why; }
+      else state.saved={title:null,action:null,sync:'written'};
       render({keepScroll:true});
       if(live) live.textContent='Saved. Publishing now, and checking that it reaches the live site.';
       confirmPublish();
       return true;
     }catch(e){
       // A moved/renamed/deleted target invalidates the remembered handle.
-      if(e && (e.name==='NotFoundError'||e.name==='InvalidStateError')){ saveHandle=null; idbDel('save-handle').catch(function(){}); }
-      if(state.saved) state.saved.sync='fail';
+      var lostH = e && (e.name==='NotFoundError'||e.name==='InvalidStateError');
+      if(lostH){ saveHandle=null; idbDel('save-handle').catch(function(){}); }
+      if(state.saved){ state.saved.sync='fail'; state.saved.why=lostH?'lost':'write'; }
+      else state.saved={title:null,action:null,sync:'fail',why:lostH?'lost':'write'};
       render({keepScroll:true});
       // The exception name is for us, not for her. Log it; say something she can act on.
       if(window.console&&console.warn) console.warn('saveToFolder failed:', e);
@@ -1581,7 +1669,7 @@
     // also disarmed confirmPublish, whose outcomes are both guarded on state.saved existing:
     // tidying away a success banner could permanently suppress the later warning that the
     // work never went live. Record which message was dismissed; a change of state re-shows it.
-    if(e.target.closest('[data-dismiss-saved]')){ state.savedSeen = state.saved && state.saved.sync; render({keepScroll:true}); return; }
+    if(e.target.closest('[data-dismiss-saved]')){ state.savedSeen = state.saved ? String(state.saved.sync) : null; render({keepScroll:true}); return; }
     if(e.target.closest('[data-restore]')){
       if(pending>0 && !confirm('This replaces the changes you have made in this visit. Continue?')) return;
       var st=state.restore; state.restore=null;
@@ -1654,8 +1742,66 @@
   // URL has no ?edit, so readers get zero edit chrome.
   function hasEditFlag(){ return /[?&]edit\b/i.test(location.search||''); }
 
+  /* ---- dev-only state gallery ----
+     Open with ?gallery to see every editor bar, banner and chip state rendered
+     side by side with mocked module state. Most of these states need a synced
+     folder, a picker grant or a mid-flight publish to reach for real, so a
+     review in a plain browser session sees only a sliver of the surface; this
+     page is the rest of it. Nothing in the UI links here and no reader URL
+     carries the flag. Pure string rendering: boot() hands over to it before any
+     wiring, it never fetches or touches storage, and every mock is restored. */
+  function hasGalleryFlag(){ return /[?&]gallery\b/i.test(location.search||''); }
+  function renderGallery(){
+    var _p=pending,_h=saveHandle,_fs=FS_OK,_pu=PUBLISH_UI,_sv=state.saved,_ss=state.savedSeen,
+        _rs=state.restore,_st=staleFallback,_dd=state.dead,_ef=hasEditFlag;
+    function base(){ pending=0; saveHandle=null; FS_OK=true; PUBLISH_UI=false; state.saved=null;
+      state.savedSeen=null; state.restore=null; state.dead=null; staleFallback=false; }
+    function withMocks(set){
+      var out='';
+      try{ set(); out=staleBar()+restoreBar()+deadBanner()+savedBar()+editBar(); }
+      catch(e){ out='<p>render failed: '+esc(e&&e.message)+'</p>'; }
+      pending=_p; saveHandle=_h; FS_OK=_fs; PUBLISH_UI=_pu; state.saved=_sv; state.savedSeen=_ss;
+      state.restore=_rs; staleFallback=_st; state.dead=_dd; hasEditFlag=_ef;
+      return out; }
+    var H={mock:true};   // handle stand-in: outside a save only its truthiness is read
+    var card='Rubrics: Purposes and Rationale';
+    var SCEN=[
+      ['Setup needed (fresh browser, nothing set up)', function(){ base(); }],
+      ['Setup needed, with a change already applied', function(){ base(); pending=1; state.saved={title:card,action:'updated',sync:null}; }],
+      ['Resting (set up, everything live)', function(){ base(); saveHandle=H; }],
+      ['Changes waiting (brought back from an earlier visit)', function(){ base(); saveHandle=H; pending=2; }],
+      ['Saving', function(){ base(); saveHandle=H; pending=1; state.saved={title:card,action:'updated',sync:'trying'}; }],
+      ["Waiting behind a colleague's in-flight save (queued)", function(){ base(); saveHandle=H; pending=1; state.saved={title:card,action:'updated',sync:'trying',why:'queued'}; }],
+      ['Written, publishing now', function(){ base(); saveHandle=H; pending=1; state.saved={title:card,action:'updated',sync:'written'}; }],
+      ['Live on the site', function(){ base(); saveHandle=H; state.saved={title:card,action:'updated',sync:'ok'}; }],
+      ['Not live after four minutes (unconfirmed)', function(){ base(); saveHandle=H; pending=1; state.saved={title:card,action:'updated',sync:'unconfirmed'}; }],
+      ['Save failed: browser permission', function(){ base(); saveHandle=H; pending=1; state.saved={title:card,action:'updated',sync:'fail',why:'permission'}; }],
+      ['Save failed: lost track of the file', function(){ base(); pending=1; state.saved={title:card,action:'updated',sync:'fail',why:'lost'}; }],
+      ['Save failed: write error', function(){ base(); saveHandle=H; pending=1; state.saved={title:card,action:'updated',sync:'fail',why:'write'}; }],
+      ["Save failed: colleague's save never landed (queued timeout)", function(){ base(); saveHandle=H; pending=1; state.saved={title:card,action:'updated',sync:'fail',why:'queued'}; }],
+      ['Offer from a previous visit (restore)', function(){ base(); saveHandle=H; state.restore={when:'2026-07-12T21:15:00Z',n:2}; }],
+      ['Offline copy (reader)', function(){ base(); staleFallback=true; }],
+      ['Offline copy (arrived on an edit link)', function(){ base(); staleFallback=true; hasEditFlag=function(){return true;}; }],
+      ['No direct save in this browser (Safari/Firefox), changes pending', function(){ base(); FS_OK=false; pending=1; state.saved={title:card,action:'updated',sync:null}; }],
+      ['Dead share link, close match found', function(){ base(); state.dead={slug:'blooms-cognitive-domain', near:(D.resources[0]||{}).title||null}; }],
+      ['Dead share link, no match', function(){ base(); state.dead={slug:'retired-resource-name', near:null}; }]
+    ];
+    var html='<div style="max-width:1100px;margin:0 auto;padding:1rem 1rem 3rem;">'
+      +'<h1 style="font-size:1.3rem;">Editor state gallery</h1>'
+      +'<p style="margin:.3rem 0 1rem;">Every bar, banner and chip state the editor can show, rendered with mocked state. Dev-only (<code>?gallery</code>); the buttons here are inert.</p>';
+    SCEN.forEach(function(s){ html+='<h2 style="margin:1.8rem 0 .5rem;font-size:.95rem;">'+esc(s[0])+'</h2>'+withMocks(s[1]); });
+    html+='</div>';
+    document.body.classList.add('edit-on');
+    main.innerHTML=html;
+    document.title='Editor state gallery';
+    // The app's real click handler is already wired on document; swallow clicks
+    // in capture so the mock buttons cannot trigger pickers, saves or navigation.
+    main.addEventListener('click',function(e){ var b=e.target.closest('button,a'); if(b){ e.preventDefault(); e.stopPropagation(); } },true);
+  }
+
   // ---------- boot: load data, then wire the shell ----------
   function boot(){
+    if(hasGalleryFlag()){ renderGallery(); return; }
     state.edit = hasEditFlag() && !staleFallback;
     document.getElementById('foot-note').innerHTML='Teaching resources from the <b>Centre of Teaching, Learning &amp; Scholarship</b>, Red Deer Polytechnic. '
       +'Colour-coded blocks inside each card show where the information comes from; teal "outside research" notes were added July 2026 with their sources linked. '
