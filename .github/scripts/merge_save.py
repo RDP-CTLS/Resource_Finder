@@ -156,8 +156,30 @@ def main():
 
         stripped_merged = {k: v for k, v in merged.items() if k != "_meta"}
         stripped_main = {k: v for k, v in main_doc.items() if k != "_meta"}
+        stripped_theirs = {k: v for k, v in theirs.items() if k != "_meta"}
         if stripped_merged == stripped_main:
-            print("no-op: save adds nothing new to main (double-fire or replay), skipping")
+            # A genuine replay (the flow double-fired, or the same content arrived twice) is
+            # boring: what the editor sent is already what main says. Skip it quietly.
+            if stripped_theirs == stripped_main:
+                print("no-op: save is identical to main (double-fire or replay), skipping")
+                return 0
+            # Otherwise the editor DID send something different from main, yet merging it
+            # changes nothing -- because every field she touched still matches her base, so
+            # the three-way merge reads it as "she left this alone" and keeps main's newer
+            # value. That is what happens when someone reverts a field to the value it had
+            # when their page loaded (e.g. undoing a title they published minutes ago from a
+            # tab that never moved its base forward). It used to be skipped in silence while
+            # her editor showed a green "it is live" banner. Never again: say so.
+            open_issue("Needs a look: a save from %s changed nothing on the live site" % editor,
+                       issue_header(editor, branch, sha, base_rev, main_rev)
+                       + "The save was built on published version %s, but the live site is on "
+                         "version %s. Every field it changes still holds its version-%s value, "
+                         "so the merge treated them as untouched and kept the newer text that "
+                         "is already live. **Nothing was published and nothing was lost** -- but "
+                         "this edit did NOT take effect.\n\nUsual cause: an editor tab left open "
+                         "across an earlier publish, then used to undo that earlier change. Fix: "
+                         "reload the editor (so it starts from version %s) and make the change "
+                         "again.\n" % (base_rev, main_rev, base_rev, main_rev) + HOW_TO_FIX)
             return 0
 
         Path(DATA).write_text(json.dumps(merged, indent=1, ensure_ascii=False) + "\n",

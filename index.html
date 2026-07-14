@@ -1311,6 +1311,8 @@
       if(JSON.stringify(store[k])!==JSON.stringify(prev?prev[k]:undefined)) e[k]=store[k]; }
     sessionExpect[store.title]=e; }
   // Is every change in `expect` visible on the live site right now?
+  // Resolves to the LIVE REV (a number) when everything landed, false otherwise, so the
+  // caller can move our base forward -- see adoptPublishedRev.
   function publishedYet(expect){
     expect = expect || sessionExpect;
     var any=false, t0; for(t0 in expect){ if(Object.prototype.hasOwnProperty.call(expect,t0)) any=true; }
@@ -1326,8 +1328,21 @@
           var e=expect[title], k;
           for(k in e){ if(!Object.prototype.hasOwnProperty.call(e,k)) continue;
             if(JSON.stringify(lr[k])!==JSON.stringify(e[k])) return false; } }
-        return true; })
+        var lrev=(o._meta||{}).rev;
+        return typeof lrev==='number' ? lrev : true; })
       .catch(function(){ return false; }); }
+  /* Move our base forward to the version we just published.
+     Without this, a tab that loaded rev N keeps stamping baseRev = N forever, even after its
+     own save published rev N+1. The merge bot then three-way merges the NEXT save against the
+     stale rev N -- and any field the editor puts BACK to its rev-N value reads as "she changed
+     nothing", so main's newer value wins and her edit is dropped as a no-op. That is exactly
+     how a rename-back vanished on 2026-07-14: it was silently skipped, with a green "live"
+     banner still showing. Adopting the published rev makes the next save's base the version
+     everyone can actually see. We touch only the version stamp, never her content. */
+  function adoptPublishedRev(rev){
+    if(typeof rev!=='number') return;
+    if(!D._meta || typeof D._meta!=='object') D._meta={};
+    if(typeof D._meta.rev!=='number' || rev>D._meta.rev) D._meta.rev=rev; }
   // GitHub Pages typically redeploys within ~2 min; give it 4 before crying wolf.
   var CONFIRM_TRIES=12, CONFIRM_EVERY=20000, confirmTimer=null;
   function confirmPublish(){
@@ -1344,6 +1359,7 @@
       n++;
       publishedYet().then(function(ok){
         if(ok){
+          adoptPublishedRev(ok);   // ok carries the live rev; our next save must build on it
           clearPendingLocal(); sessionExpect={};
           if(state.saved) state.saved.sync='ok';
           render({keepScroll:true});

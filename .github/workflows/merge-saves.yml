@@ -25,6 +25,13 @@ permissions:
 
 jobs:
   merge:
+    # Skip the push that CREATES a save branch. The upload flow makes a missing save/<name>
+    # branch by pointing it at main's tip, so that first push carries main's own published
+    # file -- which rightly has no _meta.baseRev, because a published file is not a save. The
+    # bot read it as an editor save and filed a scary "arrived without a base version" issue
+    # against every new editor's first save (issues #2-#6 on 2026-07-14). A branch creation
+    # is not a save; there is nothing to merge.
+    if: ${{ !github.event.created }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
