@@ -1416,7 +1416,7 @@
      editor; the file handle is remembered in IndexedDB. Everyone else keeps
      the Publish (download + upload) path, which is also the fallback when
      direct save fails for any reason. */
-  var FS_OK = typeof window.showSaveFilePicker==='function';
+  var FS_OK = typeof window.showOpenFilePicker==='function';
   var saveHandle=null, knownRaws=[];
   function idbOpen(){ return new Promise(function(res,rej){ var r=indexedDB.open('rf-editor',1);
     r.onupgradeneeded=function(){ r.result.createObjectStore('kv'); };
@@ -1523,16 +1523,29 @@
     // handle, so a save target picked before the folder was synced -- or pointed
     // at the wrong place entirely -- can always be fixed by the editor herself.
     try{
-      var opts={suggestedName:'ctls-data.json',
+      /* MUST be showOpenFilePicker, never showSaveFilePicker. A save picker TRUNCATES the
+         file it is pointed at the moment the editor confirms it -- so doing this setup
+         correctly (selecting the real synced ctls-data.json) emptied the shared catalogue
+         before a single byte of ours was written, and OneDrive dutifully synced the
+         emptiness up. It cost us two live incidents on 2026-07-14. An open picker asks for
+         readwrite access to an EXISTING file and touches nothing. */
+      var opts={multiple:false,
         types:[{description:'JSON data',accept:{'application/json':['.json']}}]};
       // Open the picker where it will do the most good: at the current save
       // location when changing it, otherwise in Documents (where OneDrive puts
       // synced libraries) rather than Downloads.
       opts.startIn = saveHandle || 'documents';
       var h;
-      try{ h=await window.showSaveFilePicker(opts); }
+      try{ h=(await window.showOpenFilePicker(opts))[0]; }
       catch(e){ if(e && e.name==='AbortError') throw e;
-        delete opts.startIn; h=await window.showSaveFilePicker(opts); }
+        delete opts.startIn; h=(await window.showOpenFilePicker(opts))[0]; }
+      // An open picker only grants read; ask for write before we rely on it, so a refused
+      // prompt fails here (with a clear message) rather than at the first real save.
+      var perm=await h.queryPermission({mode:'readwrite'});
+      if(perm!=='granted') perm=await h.requestPermission({mode:'readwrite'});
+      if(perm!=='granted'){
+        if(live) live.textContent='The browser needs your permission to save to that file. Run Set up direct save again and choose Allow when it asks.';
+        return; }
       /* Guard against the classic miss: pointing this at something that is not the synced
          shared file. Everything then LOOKS fine forever -- we write, we report "saved", and
          the live site never changes.
@@ -1554,7 +1567,7 @@
       var badPick='';
       try{
         var f=await h.getFile();
-        if(f.size===0) badPick='it is empty, so the picker just created it. This is a brand-new file, not the shared one';
+        if(f.size===0) badPick='it is empty. The shared catalogue is never empty, so this is either the wrong file or a copy that has not finished syncing yet';
         else {
           var txt=await f.text(), parsed=JSON.parse(txt);
           if(!parsed || !Array.isArray(parsed.resources)) badPick='there is no resource list inside, so it is not the catalogue';
@@ -1580,10 +1593,11 @@
           if(live) live.textContent='Nothing changed. Pick the ctls-data.json inside your synced Finder Data folder. If that folder is not on this computer yet, open the Finder Data library in SharePoint and click Sync first, or email CTLS@rdpolytech.ca for help.';
           return; } }
       saveHandle=h; try{ await idbSet('save-handle',h); }catch(e){}
-      // Setting up is not saving. The old code always wrote here, so a brand-new editor who
-      // had changed nothing still started a publish check with nothing to check for, and got
-      // the red "it never reached the site" alarm four minutes later. Only save if there is
-      // something to save.
+      // Setting up is not saving: writing with nothing pending would re-trigger the whole
+      // publish pipeline for no change, and start a publish check with no expectation, which
+      // can only end in the false "it never reached the site" alarm. Only save real work.
+      // (Safe to skip the write now that the picker no longer truncates -- see above. If the
+      // file we were handed IS empty, we never get here: the guard sends her back.)
       if(pending>0){ await saveToFolder(); return; }
       render({keepScroll:true});
       if(live) live.textContent='Publishing is turned on for this computer. Editing a card and saving it will now put it on the live site.';
