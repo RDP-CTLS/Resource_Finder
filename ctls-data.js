@@ -669,7 +669,7 @@ window.CTLS = {
    "topic": "Assessment & grading",
    "oneLine": "A CTLS tip-sheet explaining what rubrics are, the three main rubric types, design strategies, and step-by-step Blackboard how-tos for building and grading with rubrics.",
    "url": "https://rdpolytech.ca/media/5066/download?inline",
-   "readTime": 7,
+   "readTime": 6,
    "format": "how-to",
    "status": "refreshing",
    "concepts": [
