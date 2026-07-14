@@ -296,6 +296,8 @@
   .addrow{border:1.5px dashed var(--line);background:none;color:var(--purple-deep);border-radius:8px;padding:.35rem .8rem;font-weight:700;font-size:.82rem;cursor:pointer;margin-top:.2rem;}
   .addrow:hover{border-color:var(--purple);background:var(--t-purple);}
   .relgrid{display:grid;grid-template-columns:1fr 1fr;gap:.2rem .9rem;}
+  .pvgap{font-size:.8rem;color:var(--ink-soft);margin:.5rem .2rem 0;}
+  .pvgap:empty{display:none;}
   .relgrid label{display:flex;gap:.4rem;align-items:flex-start;font-size:.85rem;font-weight:400;color:var(--ink);cursor:pointer;}
   /* each research note is its own sub-card so notes read as units (finding F) */
   .notecard{border:1px solid var(--line);background:#fff;border-radius:10px;padding:.65rem .8rem .8rem;margin:.55rem 0;}
@@ -909,9 +911,23 @@
     +'<input type="url" data-cell="url" aria-label="Citation link, starts with https://" placeholder="https:// citation link" value="'+esc(f.url||'')+'"></div></div>'; }
   function fResearch(vals){ var rows=(vals&&vals.length?vals:[]).map(researchNote).join('');
     return '<div class="field"><label>Research notes <span class="help">every fact must carry a citation URL, that is the rule</span></label><div data-list="research">'+rows+'</div><button class="addrow" type="button" data-addrow="research">+ Add a research note</button>'+undoBtn('research')+'</div>'; }
-  function fRelated(current){ var cur={}; (current||[]).forEach(function(t){cur[t]=1;}); var orig=state.editCtx&&state.editCtx.orig;
-    var boxes=D.resources.filter(function(r){return r.title!==orig;}).map(function(r){ return '<label><input type="checkbox" data-relcheck value="'+esc(r.title)+'"'+(cur[r.title]?' checked':'')+'> '+esc(r.title)+'</label>'; }).join('');
-    return '<div class="field"><label>Related resources <span class="help">tick the ones a reader should see next</span></label><div class="relgrid" data-list="related">'+(boxes||'<span class="help">No other resources yet.</span>')+'</div></div>'; }
+  // The related grid, separated from fRelated so the filter can rebuild the grid
+  // alone: the filter input itself is never rebuilt (the focused-input rule), and
+  // a TICKED box always renders whatever the filter says -- a filter that could
+  // hide a selection would silently drop it from the next readDraft().
+  function relGridHTML(current, flt, orig){
+    var cur={}; (current||[]).forEach(function(t){cur[t]=1;});
+    var all=D.resources.filter(function(r){return r.title!==orig;});
+    var shown=all.filter(function(r){ return cur[r.title] || !flt || r.title.toLowerCase().indexOf(flt)>=0; });
+    var boxes=shown.map(function(r){ return '<label><input type="checkbox" data-relcheck value="'+esc(r.title)+'"'+(cur[r.title]?' checked':'')+'> '+esc(r.title)+'</label>'; }).join('');
+    return {html: boxes||'<span class="help">'+(flt?'Nothing matches that.':'No other resources yet.')+'</span>', n:shown.length, total:all.length}; }
+  function fRelated(current){ var orig=state.editCtx&&state.editCtx.orig;
+    var fltRaw=(state.editCtx&&state.editCtx.relFilter)||'';
+    var g=relGridHTML(current, fltRaw.trim().toLowerCase(), orig);
+    return '<div class="field"><label>Related resources <span class="help">tick the ones a reader should see next</span></label>'
+     +'<input type="search" data-relfilter autocomplete="off" aria-label="Filter this list by name" placeholder="Type to shorten the list" value="'+esc(fltRaw)+'">'
+     +'<div class="relgrid" data-list="related">'+g.html+'</div>'
+     +'<span class="help" data-relcount role="status">'+(fltRaw.trim()?g.n+' of '+g.total+' shown &middot; ticked ones always stay':'')+'</span></div>'; }
 
   // ---- read the whole draft back out of the DOM (rows kept unfiltered so add/remove stays index-stable) ----
   function readDraft(form){
@@ -988,6 +1004,18 @@
     return '<div class="restorebar"><p class="msg"><b>You were '+(state.editCtx.orig?'editing this card':'adding this resource')+when+' and did not save.</b> Bring back what you typed?</p>'
      +'<button class="ebtn primary" type="button" data-draft-back>Bring it back</button>'
      +'<button class="ebtn ghost" type="button" data-draft-fresh>Start fresh</button></div>'; }
+  // The preview builds from the NORMALIZED draft, so two perfectly normal
+  // mid-authoring states vanish from it without a word: jump links do not render
+  // until the PDF URL is a real link, and a research note without its fact shows
+  // as an empty line. Say so under the preview; stay silent otherwise.
+  function previewGaps(d){
+    var out=[];
+    var hasAnchor=(d.anchors||[]).some(function(a){return nonEmpty(a.label)||nonEmpty(a.page);});
+    if(hasAnchor && !/^https?:\/\//i.test(String(d.url||'').trim()))
+      out.push('Your jump links will appear here once the PDF link is filled in.');
+    if((d.research||[]).some(function(n){return !nonEmpty(n.fact) && (nonEmpty(n.source)||nonEmpty(n.url));}))
+      out.push('A research note has no fact yet, so it shows as an empty line.');
+    return out.join(' '); }
   function editFormView(){
     var d=state.editCtx.draft, orig=state.editCtx.orig, errs=validate(d);
     return '<button class="back" type="button" data-cancel-edit>'+icon('dot',12)+' Cancel</button>'
@@ -995,7 +1023,8 @@
        +'<p class="fhint">Fields are grouped by where the information comes from, the same colours as the cards. Starred fields are required.</p></div>'
      +draftOfferBar()
      +'<div class="editcols">'
-     +'<div class="editprev"><div class="pvlab">Live preview (how the card will look)</div><div id="editprev-body">'+resCard(normalizeForStore(d))+'</div></div>'
+     +'<div class="editprev"><div class="pvlab">Live preview (how the card will look)</div><div id="editprev-body">'+resCard(normalizeForStore(d))+'</div>'
+       +'<p class="pvgap" id="editprev-gaps">'+esc(previewGaps(d))+'</p></div>'
      +'<form class="editform" id="editform" onsubmit="return false">'
      +'<div id="editerrs">'+errBlock(errs)+'</div>'
      +'<div class="efgroup identity"><div class="gt">The basics</div>'+fInput('title','Title',d.title,{req:true})+fSelect('topic','Topic',d.topic,D.topics.map(function(t){return {v:t.name,t:t.name};}))+'</div>'
@@ -1088,7 +1117,7 @@
        +(pending>0?'<button class="ebtn primary" type="button" data-publish>Publish</button>':'')
        +'</div></div>';
     return '<div class="editbar">'
-     +'<div class="ebhead"><p class="t"><b>Edit mode.</b> Click <b>&#9998; Edit</b> on any card. Before anything can go live, publishing needs turning on once <b>on this computer</b>.</p>'+stateChip()+'</div>'
+     +'<div class="ebhead"><p class="t"><b>Edit mode.</b> Click <b>&#9998; Edit</b> on any card. Before anything can go live, publishing needs turning on once <b>on this computer</b>. (Each computer is set up separately. Doing it here does not undo it anywhere else.)</p>'+stateChip()+'</div>'
      +'<div class="ebrow"><button class="ebtn primary" type="button" data-setup-save>Turn on publishing (one time)</button>'
      +'<button class="ebtn ghost" type="button" data-add-res>+ Add a resource</button>'
      +'</div></div>'; }
@@ -1908,8 +1937,19 @@
   // error panel (never the inputs), so the field keeping focus is never rebuilt.
   document.addEventListener('input',function(e){
     if(!state.editCtx) return; var f=currentForm(); if(!f||!f.contains(e.target)) return;
+    // The related-list filter narrows the grid and touches nothing else -- it is
+    // display state, not draft content, so it must not run the draft rebuild.
+    if(e.target.hasAttribute && e.target.hasAttribute('data-relfilter')){
+      state.editCtx.relFilter=e.target.value;
+      var fld=e.target.closest('.field');
+      if(fld){ var g=relGridHTML((state.editCtx.draft.related)||[], e.target.value.trim().toLowerCase(), state.editCtx.orig);
+        fld.querySelector('.relgrid').innerHTML=g.html;
+        var cnt=fld.querySelector('[data-relcount]');
+        if(cnt) cnt.innerHTML=e.target.value.trim()?g.n+' of '+g.total+' shown &middot; ticked ones always stay':''; }
+      return; }
     var d=readDraft(f); state.editCtx.draft=d;
     var pv=document.getElementById('editprev-body'); if(pv) pv.innerHTML=resCard(normalizeForStore(d));
+    var pg=document.getElementById('editprev-gaps'); if(pg) pg.textContent=previewGaps(d);
     var errs=validate(d); var box=document.getElementById('editerrs'); if(box) box.innerHTML=errBlock(errs);
     var mini=document.getElementById('editerrs-mini'); if(mini) mini.innerHTML=miniErrs(errs);
     paintFieldErrs(errs);
