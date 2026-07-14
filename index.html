@@ -243,6 +243,15 @@
   .ebtn.link{background:none;border:0;color:#7a5a2a;text-decoration:underline;padding:.5rem .2rem;font-size:.8rem;min-height:44px;}
   .ebtn.link:hover{color:var(--amber);}
   .ebtn:focus-visible{outline:2px solid var(--purple);outline-offset:2px;}
+  /* in-page question dialog (replaces window.confirm). The safe choice comes first
+     and takes focus; a button that destroys work is filled in the warn pink. */
+  dialog.askdlg{border:1.5px solid var(--line-strong);border-radius:12px;padding:1.1rem 1.2rem;max-width:30rem;
+    color:var(--ink);background:var(--card);box-shadow:0 18px 50px rgba(43,37,66,.25);}
+  dialog.askdlg::backdrop{background:rgba(43,37,66,.45);}
+  .askdlg h2{font-size:1rem;margin:0 0 .35rem;}
+  .askdlg p{margin:.15rem 0 .9rem;font-size:.92rem;line-height:1.5;}
+  .askdlg .askrow{display:flex;gap:.6rem;justify-content:flex-end;flex-wrap:wrap;}
+  .ebtn.danger{background:#8a1a4d;color:#fff;} .ebtn.danger:hover{background:#6d143d;}
   /* labelled edit chip on each card (44px target, finding J) */
   .rescard{position:relative;}
   .cardpencil{position:absolute;top:.6rem;right:.6rem;z-index:2;min-height:44px;display:inline-flex;align-items:center;gap:.35rem;padding:.4rem .9rem;border-radius:999px;border:1.5px solid var(--purple);background:#fff;color:var(--purple-deep);font-weight:700;font-size:.85rem;cursor:pointer;line-height:1;font-family:inherit;}
@@ -790,7 +799,59 @@
   function syncDraftFromForm(){ var f=currentForm(); if(f&&state.editCtx){ state.editCtx.draft=readDraft(f); } }
   function draftDirty(){ if(!state.editCtx) return false; syncDraftFromForm();
     return JSON.stringify(normalizeForStore(state.editCtx.draft))!==state.editCtx.base; }
-  function confirmDiscard(){ return !draftDirty() || confirm('Discard your unsaved edits to this card?'); }
+  /* One in-page question, replacing window.confirm. A native <dialog> gives the
+     focus trap, Escape handling and focus-return-to-invoker for free; the buttons
+     are the toolbar's own. Rules: the SAFE choice is the first button and takes
+     initial focus; Escape means the safe choice; `danger` fills the risky button
+     in the warn pink. Everything funnels through the close event, so a click, an
+     Escape and a programmatic close all settle the promise exactly once.
+     (beforeunload stays native: browsers ignore custom UI there.)
+     title/body are trusted internal strings; anything dynamic is escaped at the
+     call site. Button labels are escaped here. */
+  var askEl=null, askBusy=false;
+  function ask(o){
+    if(askBusy){
+      // A question is already on screen: answer no. But if the dialog is not
+      // actually open, the previous question died without settling (something
+      // closed it out from under us) -- free the lock rather than leaving every
+      // guarded action on the page dead until a reload.
+      if(askEl && !askEl.open){ askBusy=false; }
+      else return Promise.resolve(false); }
+    if(!askEl){ askEl=document.createElement('dialog'); askEl.className='askdlg'; document.body.appendChild(askEl); }
+    if(typeof askEl.showModal!=='function')      // no <dialog> support: fall back to native
+      return Promise.resolve(confirm(o.title+(o.body?'\n\n'+String(o.body).replace(/<[^>]+>/g,''):'')));
+    askBusy=true;
+    askEl.innerHTML='<h2 id="ask-title">'+o.title+'</h2>'
+      +(o.body?'<p>'+o.body+'</p>':'')
+      +'<div class="askrow"><button class="ebtn ghost" type="button" data-ask="no">'+esc(o.no)+'</button>'
+      +'<button class="ebtn '+(o.danger?'danger':'primary')+'" type="button" data-ask="yes">'+esc(o.yes)+'</button></div>';
+    askEl.setAttribute('aria-labelledby','ask-title');
+    return new Promise(function(res){
+      // Everything funnels through settle(), driven by plain click/keydown --
+      // not by the dialog's own close/cancel events, which are kept only as
+      // fallbacks (they proved unreliable under automation, and a promise that
+      // never settles silently wedges every guarded action on the page).
+      var settled=false;
+      function settle(v){ if(settled) return; settled=true;
+        askEl.removeEventListener('click',onClick); askEl.removeEventListener('keydown',onKey);
+        askEl.removeEventListener('cancel',onCancel); askEl.removeEventListener('close',onClose);
+        askBusy=false;
+        if(askEl.open) askEl.close();   // also returns focus to the invoker
+        res(v); }
+      function onClick(e){ var b=e.target.closest('[data-ask]'); if(b) settle(b.getAttribute('data-ask')==='yes'); }
+      function onKey(e){ if(e.key==='Escape'){ e.stopPropagation(); settle(false); } }
+      function onCancel(){ settle(false); }
+      function onClose(){ settle(false); }
+      askEl.addEventListener('click',onClick);
+      askEl.addEventListener('keydown',onKey);
+      askEl.addEventListener('cancel',onCancel);
+      askEl.addEventListener('close',onClose);
+      askEl.showModal();
+      var safe=askEl.querySelector('[data-ask="no"]'); if(safe) safe.focus();
+    }); }
+  function confirmDiscard(){ if(!draftDirty()) return Promise.resolve(true);
+    return ask({title:'Discard your edits to this card?', body:'What you typed here will be thrown away.',
+      no:'Keep editing', yes:'Discard the edits', danger:true}); }
 
   // ---- field builders ----
   function fInput(f,label,val,o){ o=o||{}; return '<div class="field'+(o.req?' req':'')+'"><label for="ef-'+f+'">'+esc(label)+(o.help?' <span class="help">'+esc(o.help)+'</span>':'')+'</label>'
@@ -1408,7 +1469,15 @@
         }
       }catch(e){ badPick='it could not be read as the catalogue ('+((e&&e.name)||'error')+')'; }
       if(badPick || h.name!=='ctls-data.json'){
-        if(!confirm('That is not the shared catalogue file'+(h.name!=='ctls-data.json'?' (you picked "'+h.name+'")':'')+':\n\n'+(badPick||'it is not named ctls-data.json')+'.\n\nIf you keep it, your changes will be written to that file and NOTHING will ever appear on the live site.\n\nClick Cancel, then pick the file called ctls-data.json inside your synced Finder Data folder.\n\nKeep this file anyway?')){
+        // One reason, one consequence, and the safe way out as the focused button --
+        // not the five-paragraph native confirm this used to be.
+        var reason=badPick||'it is not named ctls-data.json';
+        var keep=await ask({title:'That is not the shared catalogue file',
+          body:(h.name!=='ctls-data.json'?'You picked <b>'+esc(h.name)+'</b>. ':'')
+            +esc(reason.charAt(0).toUpperCase()+reason.slice(1))+'.<br><br>'
+            +'If you keep it, nothing you save will ever reach the live site.',
+          no:'Pick a different file', yes:'Keep this file anyway', danger:true});
+        if(!keep){
           if(live) live.textContent='Nothing changed. Pick the ctls-data.json inside your synced Finder Data folder. If that folder is not on this computer yet, open the Finder Data library in SharePoint and click Sync first, or email CTLS@rdpolytech.ca for help.';
           return; } }
       saveHandle=h; try{ await idbSet('save-handle',h); }catch(e){}
@@ -1652,8 +1721,18 @@
   var suppressHash=false;
   window.addEventListener('hashchange', function(){
     if(suppressHash){ suppressHash=false; return; }
-    if(state.editCtx && draftDirty() && !confirm('Leave this card? Your unsaved edits will be discarded.')){
-      suppressHash=true; location.hash=(state.editCtx.hash||'#/'); return; }
+    if(state.editCtx && draftDirty()){
+      // An async question cannot hold the navigation the way a blocking confirm
+      // could, so invert it: put the form's URL back FIRST, then ask, and only
+      // re-navigate once she has chosen to leave. Nothing moves while she thinks.
+      var target=location.hash;
+      suppressHash=true; location.hash=(state.editCtx.hash||'#/');
+      ask({title:'Leave this card?', body:'Your edits here have not been saved and will be thrown away.',
+        no:'Stay here', yes:'Leave and discard', danger:true}).then(function(go){
+          if(!go || !state.editCtx) return;
+          state.editCtx=null;
+          if(location.hash===target){ applyHash(); } else { location.hash=target; } });
+      return; }
     applyHash();
   });
 
@@ -1674,7 +1753,7 @@
     // ---- editor actions (checked first; harmless when edit mode is off) ----
     var ec=e.target.closest('[data-edit-card]'); if(ec){ startEdit(ec.getAttribute('data-edit-card')); return; }
     if(e.target.closest('[data-add-res]')){ startEdit(null); return; }
-    if(e.target.closest('[data-cancel-edit]')){ if(!confirmDiscard()) return; cancelEdit(); return; }
+    if(e.target.closest('[data-cancel-edit]')){ confirmDiscard().then(function(ok){ if(ok) cancelEdit(); }); return; }
     if(e.target.closest('[data-apply-edit]')){ applyEdit(); return; }
     if(e.target.closest('[data-publish]')){ publishData(); return; }
     if(e.target.closest('[data-save-folder]')){ saveToFolder(); return; }
@@ -1685,22 +1764,29 @@
     // work never went live. Record which message was dismissed; a change of state re-shows it.
     if(e.target.closest('[data-dismiss-saved]')){ state.savedSeen = state.saved ? String(state.saved.sync) : null; render({keepScroll:true}); return; }
     if(e.target.closest('[data-restore]')){
-      if(pending>0 && !confirm('This replaces the changes you have made in this visit. Continue?')) return;
-      var st=state.restore; state.restore=null;
-      if(st&&st.data){ for(var k in st.data){ if(Object.prototype.hasOwnProperty.call(st.data,k)) D[k]=st.data[k]; } pending=st.n||0;
-        // Carry the expectation back too. Without it the restored work has nothing to check
-        // against, so its publish check could only ever end in the false "not live" alarm.
-        if(st.expect) sessionExpect=st.expect;
-        savePendingLocal(); }
-      render(); if(live) live.textContent='Those changes are back on the page. Save them when you are ready.'; return; }
+      var doRestore=function(){
+        var st=state.restore; state.restore=null;
+        if(st&&st.data){ for(var k in st.data){ if(Object.prototype.hasOwnProperty.call(st.data,k)) D[k]=st.data[k]; } pending=st.n||0;
+          // Carry the expectation back too. Without it the restored work has nothing to check
+          // against, so its publish check could only ever end in the false "not live" alarm.
+          if(st.expect) sessionExpect=st.expect;
+          savePendingLocal(); }
+        render(); if(live) live.textContent='Those changes are back on the page. Save them when you are ready.'; };
+      if(pending>0){ ask({title:'Bring back the older changes?',
+        body:'This replaces the changes you have made this visit with the ones from your last visit.',
+        no:'Keep what I have now', yes:'Replace with the older changes'}).then(function(ok){ if(ok) doRestore(); }); return; }
+      doRestore(); return; }
     // Discards the OFFER. Since applyEdit now parks an unanswered offer under its own key,
     // this button can only be reached before anything has been applied this visit, so the
     // backup and the offer are the same thing. The guard keeps that true if that ever changes.
     if(e.target.closest('[data-discard-restore]')){
-      if(!confirm('Throw those changes away? They cannot be brought back.')) return;
-      state.restore=null;
-      if(pending===0) clearPendingLocal(); else { try{ localStorage.removeItem(LS_PREV); }catch(e2){} }
-      render({keepScroll:true}); return; }
+      ask({title:'Throw those changes away?', body:'They cannot be brought back.',
+        no:'Keep them', yes:'Throw them away', danger:true}).then(function(ok){
+          if(!ok) return;
+          state.restore=null;
+          if(pending===0) clearPendingLocal(); else { try{ localStorage.removeItem(LS_PREV); }catch(e2){} }
+          render({keepScroll:true}); });
+      return; }
     if(e.target.closest('[data-errjump]')){ var eb=document.getElementById('editerrs'); if(eb) eb.scrollIntoView({behavior:'smooth',block:'center'}); return; }
     var ar=e.target.closest('[data-addrow]'); if(ar){ addRow(ar.getAttribute('data-addrow')); return; }
     var dr=e.target.closest('[data-delrow]'); if(dr){ delRow(dr); return; }
@@ -1723,7 +1809,9 @@
   });
   document.addEventListener('keydown',function(e){
     // In the form, Escape means "cancel this edit" (with a discard check), never "go home".
-    if(e.key==='Escape' && state.editCtx){ if(confirmDiscard()) cancelEdit(); return; }
+    // While the question dialog is open, Escape belongs to the dialog (ask() is
+    // re-entry-guarded, so this call resolves false and nothing moves).
+    if(e.key==='Escape' && state.editCtx){ confirmDiscard().then(function(ok){ if(ok) cancelEdit(); }); return; }
     if(e.key==='Escape'){ var qq=document.getElementById('q'); if(qq&&qq.value){ qq.value=''; state.q=''; }
       if(document.activeElement && document.activeElement.closest && document.activeElement.closest('.copyfall')) return;
       if(state.view!=='home'){ nav('#/'); } }
