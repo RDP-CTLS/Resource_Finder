@@ -898,17 +898,17 @@
   function fSelect(f,label,val,options){ var o=options.map(function(op){return '<option value="'+esc(op.v)+'"'+(op.v===(val||'')?' selected':'')+'>'+esc(op.t)+'</option>';}).join('');
     return '<div class="field"><label for="ef-'+f+'">'+esc(label)+'</label><select id="ef-'+f+'" data-field="'+f+'">'+o+'</select></div>'; }
   function fSimpleList(name,label,help,vals){ var rows=(vals&&vals.length?vals:['']).map(function(v){return '<div class="listrow" data-row><input type="text" data-cell="v" aria-label="'+esc(label)+'" value="'+esc(v||'')+'"><button class="delrow" type="button" data-delrow aria-label="Remove this line">&times;</button></div>';}).join('');
-    return '<div class="field"><label>'+esc(label)+(help?' <span class="help">'+esc(help)+'</span>':'')+'</label><div data-list="'+name+'">'+rows+'</div><button class="addrow" type="button" data-addrow="'+name+'">+ Add</button></div>'; }
+    return '<div class="field"><label>'+esc(label)+(help?' <span class="help">'+esc(help)+'</span>':'')+'</label><div data-list="'+name+'">'+rows+'</div><button class="addrow" type="button" data-addrow="'+name+'">+ Add</button>'+undoBtn(name)+'</div>'; }
   function anchorRow(a){ a=a||{}; return '<div class="listrow" data-row><input type="text" data-cell="label" aria-label="Jump link label" placeholder="Label (e.g. The rubric grid)" value="'+esc(a.label||'')+'"><input type="number" min="1" class="pagecell" data-cell="page" aria-label="Page number" placeholder="Page" value="'+esc(a.page==null?'':a.page)+'"><button class="delrow" type="button" data-delrow aria-label="Remove this jump link">&times;</button></div>'; }
   function fAnchors(vals){ var rows=(vals&&vals.length?vals:[]).map(anchorRow).join('');
-    return '<div class="field"><label>Jump-to page links <span class="help">a label + the page it starts on, a mini table of contents into the PDF</span></label><div data-list="anchors">'+rows+'</div><button class="addrow" type="button" data-addrow="anchors">+ Add a jump link</button></div>'; }
+    return '<div class="field"><label>Jump-to page links <span class="help">a label + the page it starts on, a mini table of contents into the PDF</span></label><div data-list="anchors">'+rows+'</div><button class="addrow" type="button" data-addrow="anchors">+ Add a jump link</button>'+undoBtn('anchors')+'</div>'; }
   function researchNote(f,i){ f=f||{}; return '<div class="notecard" data-row>'
     +'<div class="nhead"><span class="nlab">Note '+(i+1)+'</span><button class="delnote" type="button" data-delrow>&times; Remove note</button></div>'
     +'<input type="text" data-cell="fact" aria-label="The fact or finding" placeholder="The fact or finding" value="'+esc(f.fact||'')+'">'
     +'<div class="nrow"><input type="text" data-cell="source" aria-label="Source name" placeholder="Source name" value="'+esc(f.source||'')+'">'
     +'<input type="url" data-cell="url" aria-label="Citation link, starts with https://" placeholder="https:// citation link" value="'+esc(f.url||'')+'"></div></div>'; }
   function fResearch(vals){ var rows=(vals&&vals.length?vals:[]).map(researchNote).join('');
-    return '<div class="field"><label>Research notes <span class="help">every fact must carry a citation URL, that is the rule</span></label><div data-list="research">'+rows+'</div><button class="addrow" type="button" data-addrow="research">+ Add a research note</button></div>'; }
+    return '<div class="field"><label>Research notes <span class="help">every fact must carry a citation URL, that is the rule</span></label><div data-list="research">'+rows+'</div><button class="addrow" type="button" data-addrow="research">+ Add a research note</button>'+undoBtn('research')+'</div>'; }
   function fRelated(current){ var cur={}; (current||[]).forEach(function(t){cur[t]=1;}); var orig=state.editCtx&&state.editCtx.orig;
     var boxes=D.resources.filter(function(r){return r.title!==orig;}).map(function(r){ return '<label><input type="checkbox" data-relcheck value="'+esc(r.title)+'"'+(cur[r.title]?' checked':'')+'> '+esc(r.title)+'</label>'; }).join('');
     return '<div class="field"><label>Related resources <span class="help">tick the ones a reader should see next</span></label><div class="relgrid" data-list="related">'+(boxes||'<span class="help">No other resources yet.</span>')+'</div></div>'; }
@@ -1175,13 +1175,32 @@
     if(live) live.textContent='Row added.'; }
   function delRow(btn){ var listEl=btn.closest('[data-list]'); if(!listEl) return; var name=listEl.getAttribute('data-list');
     var idx=[].indexOf.call(listEl.querySelectorAll('[data-row]'), btn.closest('[data-row]')); syncDraftFromForm();
-    if(state.editCtx.draft[name] && idx>-1) state.editCtx.draft[name].splice(idx,1);
+    // One click destroys the row, so hold what it held: an Undo next to the Add
+    // button is cheaper recovery than making every delete stop to ask.
+    if(state.editCtx.draft[name] && idx>-1)
+      state.editCtx.lastDel={list:name, idx:idx, value:state.editCtx.draft[name].splice(idx,1)[0]};
     saveDraftLocal();
     var y=window.scrollY; render({keepScroll:true}); window.scrollTo(0,y);
     var rows=document.querySelectorAll('[data-list="'+name+'"] [data-row]');
     var next=rows.length?rows[Math.min(idx,rows.length-1)].querySelector('input'):document.querySelector('[data-addrow="'+name+'"]');
     if(next) next.focus({preventScroll:true});
-    if(live) live.textContent='Row removed.'; }
+    if(live) live.textContent='Row removed. Undo is next to the Add button.'; }
+  // Rendered by the list builders while the last delete came from that list, so it
+  // survives the form's own re-renders until the undo is spent or superseded.
+  function undoBtn(name){
+    var ld=state.editCtx && state.editCtx.lastDel;
+    return (ld && ld.list===name) ? ' <button class="addrow" type="button" data-undodel>Undo remove</button>' : ''; }
+  function undoDelRow(){
+    var ld=state.editCtx && state.editCtx.lastDel; if(!ld) return;
+    syncDraftFromForm();   // first, so bringing the row back cannot eat her typing elsewhere
+    var list=state.editCtx.draft[ld.list]; if(!list) return;
+    list.splice(Math.min(ld.idx, list.length), 0, ld.value);
+    state.editCtx.lastDel=null; saveDraftLocal();
+    var y=window.scrollY; render({keepScroll:true}); window.scrollTo(0,y);
+    var rows=document.querySelectorAll('[data-list="'+ld.list+'"] [data-row]');
+    var row=rows[Math.min(ld.idx, rows.length-1)]; var inp=row&&row.querySelector('input');
+    if(inp) inp.focus({preventScroll:true});
+    if(live) live.textContent='Row brought back.'; }
   // The form only manages the fields it shows. Any other field on the stored
   // resource (e.g. audience) must ride through an edit untouched, not be
   // silently dropped because the form never knew about it.
@@ -1856,6 +1875,7 @@
     if(e.target.closest('[data-errjump]')){ var eb=document.getElementById('editerrs'); if(eb) eb.scrollIntoView({behavior:'smooth',block:'center'}); return; }
     var ar=e.target.closest('[data-addrow]'); if(ar){ addRow(ar.getAttribute('data-addrow')); return; }
     var dr=e.target.closest('[data-delrow]'); if(dr){ delRow(dr); return; }
+    if(e.target.closest('[data-undodel]')){ undoDelRow(); return; }
     // ---- reader actions ----
     var t=e.target.closest('[data-topic]'); if(t){ openTopic(t.getAttribute('data-topic')); return; }
     var md=e.target.closest('[data-mode]'); if(md){ state.mode=md.getAttribute('data-mode');
