@@ -781,7 +781,11 @@
   }; }
   function startEdit(orig){ var r=orig?byTitle(orig):null; var draft=r?cloneRes(r):blankRes();
     // base = the normalized starting point, so we can tell a dirty draft from an untouched one
-    state.editCtx={orig:orig||null, draft:draft, base:JSON.stringify(normalizeForStore(draft)), hash:location.hash}; render(); }
+    state.editCtx={orig:orig||null, draft:draft, base:JSON.stringify(normalizeForStore(draft)), hash:location.hash}; render();
+    // The pencil that opened this form no longer exists (the whole main column was
+    // replaced), so without a hand-off, focus silently resets to <body> and a screen
+    // reader goes quiet. Land it on the form's heading instead.
+    var h=document.getElementById('ef-head'); if(h) h.focus({preventScroll:true}); }
   function currentForm(){ return document.getElementById('editform'); }
   function syncDraftFromForm(){ var f=currentForm(); if(f&&state.editCtx){ state.editCtx.draft=readDraft(f); } }
   function draftDirty(){ if(!state.editCtx) return false; syncDraftFromForm();
@@ -880,7 +884,7 @@
   function editFormView(){
     var d=state.editCtx.draft, orig=state.editCtx.orig, errs=validate(d);
     return '<button class="back" type="button" data-cancel-edit>'+icon('dot',12)+' Cancel</button>'
-     +'<div class="fhead"><div class="eyebrow">'+(orig?'Editing a resource':'New resource')+'</div><h2>'+esc(orig||'New resource')+'</h2>'
+     +'<div class="fhead"><div class="eyebrow">'+(orig?'Editing a resource':'New resource')+'</div><h2 id="ef-head" tabindex="-1">'+esc(orig||'New resource')+'</h2>'
        +'<p class="fhint">Fields are grouped by where the information comes from, the same colours as the cards. Starred fields are required.</p></div>'
      +'<div class="editcols">'
      +'<div class="editprev"><div class="pvlab">Live preview (how the card will look)</div><div id="editprev-body">'+resCard(normalizeForStore(d))+'</div></div>'
@@ -1111,7 +1115,7 @@
     state.saved={title:store.title, action:orig?'updated':'added', sync:direct?'trying':null};
     state.editCtx=null; state.view='topic'; state.topic=store.topic; state.q='';
     var tp=topicByName(store.topic); if(history.replaceState) history.replaceState(null,'', tp&&tp.id?'#/topic/'+tp.id:'#/');
-    render(); reveal(store.title);
+    render(); reveal(store.title,{focus:true});
     if(direct){ saveToFolder(); }
     else if(live) live.textContent='Saved "'+store.title+'" on this page. '+(pubOK()?'Click Publish to send it live.':'Turn on publishing to send it live.'); }
   // _meta is automation-owned: rev counts published versions. Saves carry it
@@ -1517,7 +1521,7 @@
   function topicById(id){for(var i=0;i<D.topics.length;i++){if(D.topics[i].id===id)return D.topics[i];}return null;}
   function nav(hash){ if(location.hash===hash){ applyHash(); } else { location.hash=hash; } }
   function openTopic(name){ var t=topicByName(name); nav(t&&t.id?'#/topic/'+t.id:'#/'); }
-  function reveal(title){
+  function reveal(title, opt){
     setTimeout(function(){
       var el=main.querySelector('[data-card="'+(window.CSS&&CSS.escape?CSS.escape(title):title.replace(/"/g,'\\"'))+'"]');
       // reveal() runs on the shared-link arrival path, so a reader who has asked the OS
@@ -1525,6 +1529,10 @@
       if(el){ el.classList.add('open');
         var calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         el.scrollIntoView({behavior: calm ? 'auto' : 'smooth', block:'center'});
+        // After a save (the form is gone and focus with it), put focus on this card's
+        // pencil. preventScroll: the scrollIntoView above already owns the movement.
+        // Never on the shared-link arrival path, which passes no opt.
+        if(opt&&opt.focus){ var p=el.querySelector('.cardpencil'); if(p) p.focus({preventScroll:true}); }
         if(!calm){ el.style.outline='2px solid var(--lime)'; setTimeout(function(){el.style.outline='';},1600); } }
     },60);
   }
@@ -1649,9 +1657,15 @@
     applyHash();
   });
 
-  function cancelEdit(){ var tn=state.topic; state.editCtx=null;
+  function cancelEdit(){ var tn=state.topic, orig=state.editCtx&&state.editCtx.orig; state.editCtx=null;
     var tp=tn?topicByName(tn):null; if(history.replaceState) history.replaceState(null,'', tp&&tp.id?'#/topic/'+tp.id:'#/');
-    render(); }
+    render();
+    // Hand focus back to where the edit began: the card's pencil, or for an
+    // abandoned new resource the Add button. Plain focus(), so the browser also
+    // brings the card back into view.
+    var back = orig ? main.querySelector('[data-edit-card="'+(window.CSS&&CSS.escape?CSS.escape(orig):orig.replace(/"/g,'\\"'))+'"]') : null;
+    if(!back) back = main.querySelector('[data-add-res]');
+    if(back) back.focus(); }
   document.addEventListener('click',function(e){
     var cp=e.target.closest('[data-copy]'); if(cp){ copyLink(cp.getAttribute('data-copy'), cp); return; }
     var od=e.target.closest('[data-open-dead]'); if(od){ var dt=od.getAttribute('data-open-dead'), dr=byTitle(dt);
