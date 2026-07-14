@@ -1983,15 +1983,15 @@
   function hasGalleryFlag(){ return /[?&]gallery\b/i.test(location.search||''); }
   function renderGallery(){
     var _p=pending,_h=saveHandle,_fs=FS_OK,_pu=PUBLISH_UI,_sv=state.saved,_ss=state.savedSeen,
-        _rs=state.restore,_st=staleFallback,_dd=state.dead,_ef=hasEditFlag;
+        _rs=state.restore,_st=staleFallback,_dd=state.dead,_ef=hasEditFlag,_ec=state.editCtx;
     function base(){ pending=0; saveHandle=null; FS_OK=true; PUBLISH_UI=false; state.saved=null;
-      state.savedSeen=null; state.restore=null; state.dead=null; staleFallback=false; }
-    function withMocks(set){
+      state.savedSeen=null; state.restore=null; state.dead=null; staleFallback=false; state.editCtx=null; }
+    function withMocks(set, capture){
       var out='';
-      try{ set(); out=staleBar()+restoreBar()+deadBanner()+savedBar()+editBar(); }
+      try{ set(); out=capture?capture():staleBar()+restoreBar()+deadBanner()+savedBar()+editBar(); }
       catch(e){ out='<p>render failed: '+esc(e&&e.message)+'</p>'; }
       pending=_p; saveHandle=_h; FS_OK=_fs; PUBLISH_UI=_pu; state.saved=_sv; state.savedSeen=_ss;
-      state.restore=_rs; staleFallback=_st; state.dead=_dd; hasEditFlag=_ef;
+      state.restore=_rs; staleFallback=_st; state.dead=_dd; hasEditFlag=_ef; state.editCtx=_ec;
       return out; }
     var H={mock:true};   // handle stand-in: outside a save only its truthiness is read
     var card='Rubrics: Purposes and Rationale';
@@ -2020,6 +2020,29 @@
       +'<h1 style="font-size:1.3rem;">Editor state gallery</h1>'
       +'<p style="margin:.3rem 0 1rem;">Every bar, banner and chip state the editor can show, rendered with mocked state. Dev-only (<code>?gallery</code>); the buttons here are inert.</p>';
     SCEN.forEach(function(s){ html+='<h2 style="margin:1.8rem 0 .5rem;font-size:.95rem;">'+esc(s[0])+'</h2>'+withMocks(s[1]); });
+    // ---- form-level pieces (draft offer, undo, preview hints) ----
+    html+='<h2 style="margin:2.4rem 0 .5rem;font-size:.95rem;">Draft offer (unsaved typing from an earlier visit)</h2>'
+      +withMocks(function(){ base(); state.editCtx={orig:card, offer:{when:'2026-07-12T21:15:00Z'}}; },
+        function(){ return draftOfferBar(); })
+      +'<h2 style="margin:1.8rem 0 .5rem;font-size:.95rem;">Row-delete undo (sits beside the list&#39;s Add button)</h2>'
+      +withMocks(function(){ base(); state.editCtx={lastDel:{list:'concepts',idx:0,value:''}}; },
+        function(){ return '<button class="addrow" type="button">+ Add</button>'+undoBtn('concepts'); })
+      +'<h2 style="margin:1.8rem 0 .5rem;font-size:.95rem;">Preview gap hints</h2>'
+      +'<p class="pvgap">'+esc(previewGaps({anchors:[{label:'Intro',page:1}],url:'',research:[]}))+'</p>'
+      +'<p class="pvgap">'+esc(previewGaps({anchors:[],url:'https://example.com',research:[{fact:'',source:'A source',url:'https://example.com'}]}))+'</p>';
+    // ---- question dialogs (rendered in-flow, not modal, so they all show at once) ----
+    html+='<h2 style="margin:2.4rem 0 .5rem;font-size:.95rem;">Question dialogs</h2>';
+    [['Discard your edits to this card?','What you typed here will be thrown away.','Keep editing','Discard the edits',true],
+     ['Leave this card?','Your edits here have not been saved and will be thrown away.','Stay here','Leave and discard',true],
+     ['Bring back the older changes?','This replaces the changes you have made this visit with the ones from your last visit.','Keep what I have now','Replace with the older changes',false],
+     ['Throw those changes away?','They cannot be brought back.','Keep them','Throw them away',true],
+     ['That is not the shared catalogue file','You picked <b>ctls-data (3).json</b>. It is an older copy. It is version 8, and the site is on version 10. Most likely it is a leftover download rather than the synced file.<br><br>If you keep it, nothing you save will ever reach the live site.','Pick a different file','Keep this file anyway',true]
+    ].forEach(function(q){
+      html+='<dialog class="askdlg" open style="position:static;margin:.6rem 0;">'
+        +'<h2 style="font-size:1rem;margin:0 0 .35rem;">'+q[0]+'</h2><p>'+q[1]+'</p>'
+        +'<div class="askrow"><button class="ebtn ghost" type="button">'+q[2]+'</button>'
+        +'<button class="ebtn '+(q[4]?'danger':'primary')+'" type="button">'+q[3]+'</button></div></dialog>';
+    });
     html+='</div>';
     document.body.classList.add('edit-on');
     main.innerHTML=html;
