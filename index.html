@@ -788,9 +788,46 @@
     useWhen:(r.useWhen||[]).slice(), poly:r.poly||'', ai:r.ai||'', related:(r.related||[]).slice(),
     research:(r.research||[]).map(function(f){return {fact:f.fact||'',source:f.source||'',url:f.url||''};})
   }; }
+  /* ---- draft autosave (pre-Save form state) ----
+     A half-filled form used to die with its tab: the localStorage backup only ever
+     held APPLIED work, and a dismissable beforeunload was the sole guard on typing.
+     Mirror the form draft as she types under its own key family, rf-draft:*,
+     entirely separate from rf-unsent-changes: different prefix, different
+     lifecycle, and checkRestore()/the restore offer never scan these. Keyed by the
+     resource's stable id, so the draft survives a rename made elsewhere. */
+  function draftKey(ctx){ if(!ctx) return null;
+    if(!ctx.orig) return 'rf-draft:new';
+    var r=byTitle(ctx.orig); return 'rf-draft:'+(r&&r.id?r.id:'title:'+ctx.orig); }
+  var draftTimer=null;
+  function saveDraftLocal(){ var ctx=state.editCtx; if(!ctx) return;
+    try{
+      if(JSON.stringify(normalizeForStore(ctx.draft))===ctx.base) return;   // untouched: nothing worth keeping
+      localStorage.setItem(draftKey(ctx), JSON.stringify({when:new Date().toISOString(), orig:ctx.orig, draft:ctx.draft}));
+    }catch(e){} }
+  function clearDraftLocal(ctx){ clearTimeout(draftTimer);
+    try{ var k=draftKey(ctx||state.editCtx); if(k) localStorage.removeItem(k); }catch(e){} }
+  // Old drafts are noise, not treasure: drop anything past two weeks, keep ten at most.
+  function pruneDrafts(){ try{
+    var rows=[]; for(var i=0;i<localStorage.length;i++){ var k=localStorage.key(i);
+      if(k&&k.indexOf('rf-draft:')===0){ var v=null; try{ v=JSON.parse(localStorage.getItem(k)); }catch(e){}
+        rows.push({k:k, when:(v&&v.when)||''}); } }
+    var cutoff=new Date(Date.now()-14*86400000).toISOString();
+    var alive=[];
+    rows.forEach(function(r){ if(!r.when||r.when<cutoff){ localStorage.removeItem(r.k); } else alive.push(r); });
+    alive.sort(function(a,b){ return a.when<b.when?1:-1; })
+      .slice(10).forEach(function(r){ localStorage.removeItem(r.k); });
+  }catch(e){} }
   function startEdit(orig){ var r=orig?byTitle(orig):null; var draft=r?cloneRes(r):blankRes();
     // base = the normalized starting point, so we can tell a dirty draft from an untouched one
-    state.editCtx={orig:orig||null, draft:draft, base:JSON.stringify(normalizeForStore(draft)), hash:location.hash}; render();
+    state.editCtx={orig:orig||null, draft:draft, base:JSON.stringify(normalizeForStore(draft)), hash:location.hash};
+    // Unsaved typing from an earlier visit to this same form? Offer it back, in
+    // the form itself, and only when it still differs from the card as it stands.
+    try{ var praw=localStorage.getItem(draftKey(state.editCtx));
+      if(praw){ var pd=JSON.parse(praw);
+        if(pd && pd.draft && JSON.stringify(normalizeForStore(pd.draft))!==state.editCtx.base) state.editCtx.offer=pd;
+        else localStorage.removeItem(draftKey(state.editCtx)); }   // already the same: spent
+    }catch(e){}
+    render();
     // The pencil that opened this form no longer exists (the whole main column was
     // replaced), so without a hand-off, focus silently resets to <body> and a screen
     // reader goes quiet. Land it on the form's heading instead.
@@ -942,11 +979,21 @@
   // ---- the form view (takes over the main column while editing) ----
   // At wide viewports the preview docks sticky in a right column so it stays
   // visible while typing anywhere in the form; on narrow screens it sits on top.
+  // Offer back unsaved typing from an earlier visit to this same form. Deliberately
+  // says "what you typed", never "changes": that word belongs to the restore bar,
+  // which offers back APPLIED work, and the two nets must not read as one.
+  function draftOfferBar(){
+    var offer=state.editCtx && state.editCtx.offer; if(!offer) return '';
+    var when=''; try{ if(offer.when){ when=' on '+new Date(offer.when).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}); } }catch(e){}
+    return '<div class="restorebar"><p class="msg"><b>You were '+(state.editCtx.orig?'editing this card':'adding this resource')+when+' and did not save.</b> Bring back what you typed?</p>'
+     +'<button class="ebtn primary" type="button" data-draft-back>Bring it back</button>'
+     +'<button class="ebtn ghost" type="button" data-draft-fresh>Start fresh</button></div>'; }
   function editFormView(){
     var d=state.editCtx.draft, orig=state.editCtx.orig, errs=validate(d);
     return '<button class="back" type="button" data-cancel-edit>'+icon('dot',12)+' Cancel</button>'
      +'<div class="fhead"><div class="eyebrow">'+(orig?'Editing a resource':'New resource')+'</div><h2 id="ef-head" tabindex="-1">'+esc(orig||'New resource')+'</h2>'
        +'<p class="fhint">Fields are grouped by where the information comes from, the same colours as the cards. Starred fields are required.</p></div>'
+     +draftOfferBar()
      +'<div class="editcols">'
      +'<div class="editprev"><div class="pvlab">Live preview (how the card will look)</div><div id="editprev-body">'+resCard(normalizeForStore(d))+'</div></div>'
      +'<form class="editform" id="editform" onsubmit="return false">'
@@ -1122,12 +1169,14 @@
   // somewhere sensible, so working at the bottom of the form never jumps to the top.
   function addRow(name){ syncDraftFromForm(); var d=state.editCtx.draft;
     if(name==='anchors') d.anchors.push({label:'',page:''}); else if(name==='research') d.research.push({fact:'',source:'',url:''}); else d[name].push('');
+    saveDraftLocal();
     render({keepScroll:true}); var rows=document.querySelectorAll('[data-list="'+name+'"] [data-row]');
     if(rows.length){ var inp=rows[rows.length-1].querySelector('input'); if(inp) inp.focus(); }
     if(live) live.textContent='Row added.'; }
   function delRow(btn){ var listEl=btn.closest('[data-list]'); if(!listEl) return; var name=listEl.getAttribute('data-list');
     var idx=[].indexOf.call(listEl.querySelectorAll('[data-row]'), btn.closest('[data-row]')); syncDraftFromForm();
     if(state.editCtx.draft[name] && idx>-1) state.editCtx.draft[name].splice(idx,1);
+    saveDraftLocal();
     var y=window.scrollY; render({keepScroll:true}); window.scrollTo(0,y);
     var rows=document.querySelectorAll('[data-list="'+name+'"] [data-row]');
     var next=rows.length?rows[Math.min(idx,rows.length-1)].querySelector('input'):document.querySelector('[data-addrow="'+name+'"]');
@@ -1170,6 +1219,8 @@
     if(state.restore){
       try{ localStorage.setItem(LS_PREV, JSON.stringify(state.restore)); }catch(e){}
       state.restore=null; }
+    // The typing is applied; its pre-Save backup is spent.
+    clearDraftLocal(state.editCtx);
     pending++; savePendingLocal();
     var direct = FS_OK && !!saveHandle;
     state.savedSeen=null;   // a new save: any earlier Dismiss no longer applies
@@ -1730,13 +1781,20 @@
       ask({title:'Leave this card?', body:'Your edits here have not been saved and will be thrown away.',
         no:'Stay here', yes:'Leave and discard', danger:true}).then(function(go){
           if(!go || !state.editCtx) return;
+          if(!state.editCtx.offer) clearDraftLocal(state.editCtx);   // same rule as cancelEdit
           state.editCtx=null;
           if(location.hash===target){ applyHash(); } else { location.hash=target; } });
       return; }
     applyHash();
   });
 
-  function cancelEdit(){ var tn=state.topic, orig=state.editCtx&&state.editCtx.orig; state.editCtx=null;
+  function cancelEdit(){ var tn=state.topic, orig=state.editCtx&&state.editCtx.orig;
+    // She chose to discard, so the mirror goes too -- UNLESS an offer of older
+    // typing is still sitting unanswered. Leaving the form is not an answer, and
+    // silently eating a backup behind a button that never mentioned it is exactly
+    // the trap the restore bar had (B4). It stays for next time.
+    if(!(state.editCtx && state.editCtx.offer)) clearDraftLocal(state.editCtx);
+    state.editCtx=null;
     var tp=tn?topicByName(tn):null; if(history.replaceState) history.replaceState(null,'', tp&&tp.id?'#/topic/'+tp.id:'#/');
     render();
     // Hand focus back to where the edit began: the card's pencil, or for an
@@ -1754,6 +1812,14 @@
     var ec=e.target.closest('[data-edit-card]'); if(ec){ startEdit(ec.getAttribute('data-edit-card')); return; }
     if(e.target.closest('[data-add-res]')){ startEdit(null); return; }
     if(e.target.closest('[data-cancel-edit]')){ confirmDiscard().then(function(ok){ if(ok) cancelEdit(); }); return; }
+    if(e.target.closest('[data-draft-back]')){ var dctx=state.editCtx;
+      if(dctx && dctx.offer && dctx.offer.draft){ dctx.draft=dctx.offer.draft; dctx.offer=null; render();
+        var dh=document.getElementById('ef-head'); if(dh) dh.focus({preventScroll:true});
+        if(live) live.textContent='What you typed before is back in the form.'; }
+      return; }
+    if(e.target.closest('[data-draft-fresh]')){ var fctx=state.editCtx;
+      if(fctx){ clearDraftLocal(fctx); fctx.offer=null; render({keepScroll:true}); }
+      return; }
     if(e.target.closest('[data-apply-edit]')){ applyEdit(); return; }
     if(e.target.closest('[data-publish]')){ publishData(); return; }
     if(e.target.closest('[data-save-folder]')){ saveToFolder(); return; }
@@ -1827,6 +1893,8 @@
     var errs=validate(d); var box=document.getElementById('editerrs'); if(box) box.innerHTML=errBlock(errs);
     var mini=document.getElementById('editerrs-mini'); if(mini) mini.innerHTML=miniErrs(errs);
     paintFieldErrs(errs);
+    // Mirror the typing to its rf-draft backup, debounced a beat behind her hands.
+    clearTimeout(draftTimer); draftTimer=setTimeout(saveDraftLocal, 900);
   });
   // Last line of defence: warn before the tab closes on a dirty draft, or on work that has
   // not been written anywhere yet.
@@ -1914,6 +1982,7 @@
     // back any changes applied in an earlier visit but never downloaded, and
     // pick up the remembered direct-save handle so the bars show the right buttons.
     checkRestore(); if(state.restore){ render({keepScroll:true}); dropRestoreIfAlreadyLive(); }
+    if(state.edit) pruneDrafts();
     loadSaveHandle().then(function(){ if(state.edit && saveHandle) render({keepScroll:true}); });
   }
   // Primary source = ctls-data.json (the editable document). If fetch is unavailable
