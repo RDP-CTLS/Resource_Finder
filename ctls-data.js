@@ -664,13 +664,13 @@ window.CTLS = {
   },
   {
    "id": "rubrics",
+   "audience": "all",
    "title": "Rubrics: Purposes and Rationale",
    "topic": "Assessment & grading",
    "oneLine": "A CTLS tip-sheet explaining what rubrics are, the three main rubric types, design strategies, and step-by-step Blackboard how-tos for building and grading with rubrics.",
    "url": "https://rdpolytech.ca/media/5066/download?inline",
-   "readTime": 6,
+   "readTime": 7,
    "format": "how-to",
-   "audience": "all",
    "status": "refreshing",
    "concepts": [
     "Rubrics specify assessment criteria and levels of achievement to standardize grading and feedback",
