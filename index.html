@@ -53,6 +53,9 @@
   .grid .tile:nth-child(3n+2){border-top-color:var(--lime);background:var(--t-lime);}
   .grid .tile:nth-child(3n){border-top-color:var(--orange);background:var(--t-orange);}
   .tile:hover{transform:translateY(-2px);filter:brightness(.985);}
+  /* touch has no hover: press feedback so taps don't feel dead */
+  .tile:active{transform:none;filter:brightness(.94);}
+  .openres:active,.sharebtn:active,.reltag:active,.obtn:active,.expand:active,.back:active{filter:brightness(.9);}
   .tile .ico{width:38px;height:38px;background:#fff;color:var(--purple-deep);border-radius:9px;display:flex;align-items:center;justify-content:center;}
   .grid .tile:nth-child(3n+2) .ico{color:#4f7a10;}
   .grid .tile:nth-child(3n) .ico{color:#a35c0a;}
@@ -69,7 +72,7 @@
   .chip.update{background:#e7eefb;color:#2456a6;}
   .chip.read{background:var(--t-purple);color:var(--purple-deep);}
   .chip.fmt{background:#efedf3;color:var(--ink-soft);}
-  .back{background:none;border:0;color:var(--purple-deep);font-weight:700;cursor:pointer;padding:.3rem 0;display:inline-flex;align-items:center;gap:.4rem;font-size:.92rem;}
+  .back{background:none;border:0;color:var(--purple-deep);font-weight:700;cursor:pointer;padding:.55rem .6rem .55rem 0;display:inline-flex;align-items:center;gap:.4rem;font-size:.92rem;}
   .topic-head{margin:.55rem 0 1.3rem;}
   .topic-head h2{font-size:1.6rem;margin:.2rem 0 .3rem;}
   .topic-head .blurb{color:var(--ink-soft);max-width:44rem;}
@@ -91,7 +94,7 @@
   .rescard .meta{display:flex;flex-wrap:wrap;gap:.45rem;align-items:center;}
   .rescard .more{margin-top:.8rem;border-top:1px dashed var(--line);padding-top:.9rem;display:none;}
   .rescard.open .more{display:block;}
-  .rescard .expand{display:block;background:none;border:0;color:var(--purple-deep);font-weight:700;font-size:.85rem;cursor:pointer;margin-top:.7rem;padding:0;}
+  .rescard .expand{display:block;background:none;border:0;color:var(--purple-deep);font-weight:700;font-size:.85rem;cursor:pointer;margin-top:.25rem;padding:.5rem 0;}
   .openrow{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;margin:.25rem 0 .15rem;}
   .openres{display:inline-flex;align-items:center;gap:.4rem;background:var(--purple);color:#fff;font-weight:700;font-size:.85rem;text-decoration:none;border-radius:8px;padding:.5rem 1rem;}
   .openres:hover{background:var(--purple-deep);}
@@ -123,9 +126,9 @@
   .chip.topic{background:var(--t-purple);color:var(--purple-deep);}
   .usewhen{font-size:.85rem;color:var(--ink-soft);margin:.15rem 0 .5rem;}
   .usewhen .uw{font-weight:800;font-size:.66rem;text-transform:uppercase;letter-spacing:.05em;color:#4f7a10;margin-right:.4rem;}
-  .jumps{font-size:.82rem;margin:.35rem 0 .35rem;display:flex;flex-wrap:wrap;gap:.15rem .8rem;align-items:baseline;}
+  .jumps{font-size:.82rem;margin:.35rem 0 .35rem;display:flex;flex-wrap:wrap;gap:.35rem .9rem;align-items:baseline;}
   .jumps .jlab{font-weight:800;font-size:.66rem;text-transform:uppercase;letter-spacing:.05em;color:var(--purple-deep);}
-  .jumps a{white-space:nowrap;}
+  .jumps a{white-space:nowrap;display:inline-block;padding:.12rem 0;}
   .taskrow{margin-top:1.15rem;}
   .modetabs{display:inline-flex;background:var(--card);border:1.5px solid var(--line);border-radius:999px;padding:.25rem;gap:.25rem;}
   .modetab{border:0;background:none;border-radius:999px;padding:.42rem 1.1rem;font-weight:700;font-size:.88rem;color:var(--ink-soft);cursor:pointer;transition:.13s;}
@@ -190,7 +193,22 @@
   .hidden{display:none;}
   .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);}
   .secthead{font-size:.78rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--purple);margin:1.6rem 0 .4rem;}
-  @media (max-width:560px){ .hero h1{font-size:1.6rem;} }
+  @media (max-width:560px){
+    .hero{padding:1.9rem 0 1.2rem;}
+    .hero h1{font-size:1.6rem;}
+    /* phones: while a search is live the intro block would push results below the
+       first screenful, so it steps aside; clearing the box brings it straight back */
+    body.searching .hero{display:none;}
+    body.searching #results{margin-top:1.3rem;}
+    /* 16px stops iOS Safari zooming the whole page when an input takes focus */
+    .searchbar input,.copyfall input,.field input,.field textarea,.field select{font-size:1rem;}
+    .aitoggle{padding:.25rem 0;}
+    .reltag{padding:.5rem .75rem;}
+    .starthere .mini-pdf{padding:.28rem .55rem;}
+    /* colour key: fixed badge column + wrapping description, not ragged inline flow */
+    .provkey{display:grid;grid-template-columns:1fr;gap:.55rem;}
+    .provkey .pair{display:grid;grid-template-columns:auto 1fr;align-items:baseline;gap:.55rem;}
+  }
 
   /* ============================================================
      Phase 0 inline editor. Everything below is editor-only chrome.
@@ -448,7 +466,7 @@
       +'</button>';
     }).join('');
   }
-  function paintResults(){ var r=document.getElementById('results'); if(r) r.innerHTML=resultsBody(); }
+  function paintResults(){ document.body.classList.toggle('searching', state.view==='search'); var r=document.getElementById('results'); if(r) r.innerHTML=resultsBody(); }
   function shortBlurb(b){ if(!b) return 'Resources and supports for this part of your teaching.'; b=b.replace(/^["']|["']$/g,''); return b.length>120?b.slice(0,117).replace(/[,.\s]+\S*$/,'')+'...':b; }
   // The colour key teaches the provenance system: which colour means the info came
   // from the resource itself, from the CTLS team, or from cited outside research.
@@ -1669,6 +1687,7 @@
     document.body.classList.toggle('ai-on', state.ai);
     document.body.classList.toggle('edit-on', state.edit);
     document.body.classList.toggle('editing-form', !!state.editCtx);
+    document.body.classList.toggle('searching', state.view==='search');
     if(state.editCtx){ main.innerHTML=restoreBar()+editFormView(); if(!(opt&&opt.keepScroll)) window.scrollTo(0,0); return; }
     var bar = staleBar() + (state.edit ? restoreBar()+savedBar()+editBar() : '');
     bar += deadBanner();
