@@ -7,11 +7,16 @@
 <style>
   :root{
     --purple:#6b4e9e; --purple-deep:#54397e; --lime:#8cc63e; --orange:#f3992f;
-    --ink:#33303e; --ink-soft:#6a6678; --bg:#f4f2f7; --card:#ffffff; --line:#e7e3ef; --line-strong:#8b7bb0;
+    --ink:#33303e; --ink-soft:#6a6678; --ink-2:#4a4658; --bg:#f4f2f7; --card:#ffffff; --line:#e7e3ef; --line-strong:#8b7bb0;
     --t-purple:#f3effa; --t-lime:#f2f8e6; --t-orange:#fdf2e4;
     --teal:#1d7a8c; --teal-deep:#155e6d; --t-teal:#e3f2f5;
     --amber:#8a5410; --amber-soft:#fdf0dd; --violet:#685BC7; --forest:#54397e;
     --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    /* Readability type scale — one place to tune. Reading text (body/secondary) sits at
+       or just under 16px; labels/micro stay small but are darkened for contrast. */
+    --fs-hero:clamp(1.7rem, 1.15rem + 2.4vw, 2.4rem);
+    --fs-h2:1.55rem; --fs-card-title:1.2rem;
+    --fs-body:1rem; --fs-secondary:.95rem; --fs-label:.8rem; --fs-micro:.7rem;
   }
   *{box-sizing:border-box;} html{-webkit-font-smoothing:antialiased;scroll-behavior:smooth;}
   @media (prefers-reduced-motion: reduce){
@@ -29,8 +34,8 @@
   .top .spacer{flex:1;}
   .hero{padding:3.1rem 0 1.5rem;}
   .eyebrow{font-size:.78rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--purple);}
-  .hero h1{font-size:2.4rem;line-height:1.12;margin:.45rem 0 .3rem;letter-spacing:-.02em;}
-  .hero .lead{color:var(--ink-soft);max-width:46rem;margin:.3rem 0 1.3rem;}
+  .hero h1{font-size:var(--fs-hero);line-height:1.12;margin:.45rem 0 .3rem;letter-spacing:-.02em;}
+  .hero .lead{color:var(--ink-2);max-width:46rem;margin:.3rem 0 1.3rem;}
   .hairline{height:3px;width:64px;background:var(--purple-deep);margin:.2rem 0 0;}
   .searchbar{display:flex;align-items:center;gap:.6rem;background:var(--bg);border:1.5px solid var(--line);border-radius:10px;padding:.45rem .85rem;flex:0 1 340px;min-width:210px;}
   .searchbar:focus-within{border-color:var(--purple);}
@@ -59,23 +64,23 @@
   .tile .ico{width:38px;height:38px;background:#fff;color:var(--purple-deep);border-radius:9px;display:flex;align-items:center;justify-content:center;}
   .grid .tile:nth-child(3n+2) .ico{color:#4f7a10;}
   .grid .tile:nth-child(3n) .ico{color:#a35c0a;}
-  .tile h3{margin:.1rem 0 0;font-size:1.08rem;}
-  .tile p{margin:0;font-size:.86rem;color:var(--ink-soft);line-height:1.45;}
-  .tile .count{margin-top:auto;font-size:.76rem;font-weight:800;letter-spacing:.03em;text-transform:uppercase;color:var(--purple-deep);display:inline-flex;align-items:center;gap:.35rem;}
+  .tile h3{margin:.1rem 0 0;font-size:var(--fs-card-title);line-height:1.25;}
+  .tile p{margin:0;font-size:var(--fs-secondary);color:var(--ink-2);line-height:1.5;}
+  .tile .count{margin-top:auto;font-size:var(--fs-label);font-weight:800;letter-spacing:.03em;text-transform:uppercase;color:var(--purple-deep);display:inline-flex;align-items:center;gap:.35rem;}
   .grid .tile:nth-child(3n+2) .count{color:#4f7a10;}
   .grid .tile:nth-child(3n) .count{color:#a35c0a;}
   .tile.dev{outline:1.5px dashed #c9bfe0;outline-offset:-6px;}
-  .chip{display:inline-flex;align-items:center;gap:.35rem;font-size:.72rem;font-weight:700;border-radius:999px;padding:.24rem .68rem;letter-spacing:.02em;}
+  .chip{display:inline-flex;align-items:center;gap:.35rem;font-size:var(--fs-label);font-weight:700;border-radius:999px;padding:.3rem .72rem;letter-spacing:.02em;}
   .chip.refresh{background:var(--amber-soft);color:var(--amber);}
   .chip.moved{background:#e8eef9;color:var(--violet);}
   .chip.dev{background:var(--amber-soft);color:var(--amber);}
   .chip.update{background:#e7eefb;color:#2456a6;}
   .chip.read{background:var(--t-purple);color:var(--purple-deep);}
-  .chip.fmt{background:#efedf3;color:var(--ink-soft);}
+  .chip.fmt{background:#efedf3;color:var(--ink-2);}
   .back{background:none;border:0;color:var(--purple-deep);font-weight:700;cursor:pointer;padding:.55rem .6rem .55rem 0;display:inline-flex;align-items:center;gap:.4rem;font-size:.92rem;}
   .topic-head{margin:.55rem 0 1.3rem;}
-  .topic-head h2{font-size:1.6rem;margin:.2rem 0 .3rem;}
-  .topic-head .blurb{color:var(--ink-soft);max-width:44rem;}
+  .topic-head h2{font-size:var(--fs-h2);margin:.2rem 0 .3rem;line-height:1.2;}
+  .topic-head .blurb{color:var(--ink-2);max-width:44rem;}
   .starthere{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:1.3rem 1.5rem;margin:0 0 1.5rem;}
   .starthere .k{font-size:.78rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--purple-deep);}
   .starthere ol{margin:.75rem 0 0;padding-left:0;list-style:none;counter-reset:s;display:flex;flex-direction:column;}
@@ -89,34 +94,43 @@
   .rescard{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--lime);border-radius:12px;margin:0 0 1rem;overflow:hidden;transition:border-color .13s,box-shadow .13s;}
   .rescard:hover{border-left-color:var(--purple);box-shadow:0 2px 10px rgba(51,48,62,.07);}
   .rescard .body{padding:1.25rem 1.35rem;}
-  .rescard h4{margin:0 0 .15rem;font-size:1.08rem;}
-  .rescard .one{color:var(--ink-soft);font-size:.92rem;margin:.25rem 0 .55rem;}
+  .rescard h4{margin:0 0 .15rem;font-size:var(--fs-card-title);line-height:1.25;}
+  .rescard .one{color:var(--ink);font-size:var(--fs-body);line-height:1.55;margin:.25rem 0 .55rem;}
   .rescard .meta{display:flex;flex-wrap:wrap;gap:.45rem;align-items:center;}
   .rescard .more{margin-top:.8rem;border-top:1px dashed var(--line);padding-top:.9rem;display:none;}
   .rescard.open .more{display:block;}
-  .rescard .expand{display:block;background:none;border:0;color:var(--purple-deep);font-weight:700;font-size:.85rem;cursor:pointer;margin-top:.25rem;padding:.5rem 0;}
+  /* Disclosure control: a real, tappable bar that names what's behind it (a count
+     hint) so a reader can decide to open it without guessing. Collapsed by default. */
+  .rescard .expand{display:flex;align-items:center;flex-wrap:wrap;gap:.5rem;width:100%;text-align:left;
+    background:var(--t-purple);border:1px solid var(--line);border-radius:9px;color:var(--purple-deep);
+    font-weight:700;font-size:var(--fs-secondary);cursor:pointer;margin-top:.85rem;padding:.6rem .9rem;
+    min-height:44px;transition:background .13s,border-color .13s;}
+  .rescard .expand:hover{background:#e9ddf8;border-color:var(--line-strong);}
+  .rescard .expand .exchev{flex:0 0 auto;transition:transform .15s;}
+  .rescard.open .expand .exchev{transform:rotate(90deg);}
+  .rescard .expand .exhint{margin-left:auto;color:var(--ink-2);font-weight:600;font-size:var(--fs-label);}
   .openrow{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;margin:.25rem 0 .15rem;}
-  .openres{display:inline-flex;align-items:center;gap:.4rem;background:var(--purple);color:#fff;font-weight:700;font-size:.85rem;text-decoration:none;border-radius:8px;padding:.5rem 1rem;}
+  .openres{display:inline-flex;align-items:center;gap:.4rem;background:var(--purple);color:#fff;font-weight:700;font-size:var(--fs-secondary);text-decoration:none;border-radius:8px;padding:.55rem 1.05rem;min-height:44px;}
   .openres:hover{background:var(--purple-deep);}
   /* Provenance colour system: every info block inside a card is tinted by where
      the information came from - purple = the resource PDF itself, green = written
      by CTLS for RDP, teal = added from published outside research (source linked). */
-  .infoblock{margin:.6rem 0;border-radius:10px;padding:.75rem .95rem;font-size:.88rem;}
-  .infoblock .blab{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;font-weight:800;font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.3rem;}
+  .infoblock{margin:.6rem 0;border-radius:10px;padding:.8rem 1rem;font-size:var(--fs-body);line-height:1.55;}
+  .infoblock .blab{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;font-weight:800;font-size:var(--fs-micro);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.35rem;}
   .infoblock p{margin:0;}
-  .infoblock ul{margin:.1rem 0 0;padding-left:1.15rem;}
-  .infoblock li{margin:.22rem 0;}
+  .infoblock ul{margin:.1rem 0 0;padding-left:1.2rem;}
+  .infoblock li{margin:.3rem 0;}
   .infoblock.inside{background:var(--t-purple);} .infoblock.inside .blab{color:var(--purple-deep);}
   .infoblock.ctls{background:var(--t-lime);} .infoblock.ctls .blab{color:#4f7a10;}
   .infoblock.research{background:var(--t-teal);} .infoblock.research .blab{color:var(--teal-deep);}
   .infoblock.gated{background:var(--t-orange);} .infoblock.gated .blab{color:#a35c0a;}
   .cite{color:var(--teal-deep);font-size:.8rem;font-weight:700;}
-  .prov{display:inline-block;font-size:.62rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;border-radius:4px;padding:.12rem .45rem;white-space:nowrap;background:#fff;}
+  .prov{display:inline-block;font-size:var(--fs-micro);font-weight:800;letter-spacing:.05em;text-transform:uppercase;border-radius:4px;padding:.15rem .5rem;white-space:nowrap;background:#fff;}
   .prov.res{color:var(--purple-deep);box-shadow:inset 0 0 0 1px #d8cbee;}
   .prov.ctls{color:#4f7a10;box-shadow:inset 0 0 0 1px #cfe0ae;}
   .prov.ext{color:var(--teal-deep);box-shadow:inset 0 0 0 1px #bcdde4;}
-  .provkey{display:flex;flex-wrap:wrap;gap:.3rem .9rem;align-items:center;font-size:.82rem;color:var(--ink-soft);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.7rem 1rem;margin:1.1rem 0 0;}
-  .provkey .kt{font-weight:800;font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:var(--ink);}
+  .provkey{display:flex;flex-wrap:wrap;gap:.3rem .9rem;align-items:center;font-size:var(--fs-secondary);color:var(--ink-2);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.7rem 1rem;margin:1.1rem 0 0;}
+  .provkey .kt{font-weight:800;font-size:var(--fs-micro);text-transform:uppercase;letter-spacing:.06em;color:var(--ink);}
   .provkey .pair{display:inline-flex;align-items:center;gap:.4rem;}
   .rel{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.3rem;}
   .reltag{background:var(--t-purple);border:0;border-radius:8px;color:var(--purple-deep);font-size:.8rem;padding:.3rem .6rem;cursor:pointer;}
@@ -124,8 +138,8 @@
   .starthere .mini-pdf{background:var(--t-purple);color:var(--purple-deep);font-size:.7rem;font-weight:800;letter-spacing:.03em;border-radius:6px;padding:.12rem .5rem;text-decoration:none;margin-left:.5rem;border-bottom:0;white-space:nowrap;}
   .starthere .mini-pdf:hover{background:#e7ddf5;border-bottom:0;}
   .chip.topic{background:var(--t-purple);color:var(--purple-deep);}
-  .usewhen{font-size:.85rem;color:var(--ink-soft);margin:.15rem 0 .5rem;}
-  .usewhen .uw{font-weight:800;font-size:.66rem;text-transform:uppercase;letter-spacing:.05em;color:#4f7a10;margin-right:.4rem;}
+  .usewhen{font-size:var(--fs-secondary);line-height:1.5;color:var(--ink-2);margin:.15rem 0 .5rem;}
+  .usewhen .uw{font-weight:800;font-size:var(--fs-micro);text-transform:uppercase;letter-spacing:.05em;color:#4f7a10;margin-right:.4rem;}
   .jumps{font-size:.82rem;margin:.35rem 0 .35rem;display:flex;flex-wrap:wrap;gap:.35rem .9rem;align-items:baseline;}
   .jumps .jlab{font-weight:800;font-size:.66rem;text-transform:uppercase;letter-spacing:.05em;color:var(--purple-deep);}
   .jumps a{white-space:nowrap;display:inline-block;padding:.12rem 0;}
@@ -135,7 +149,7 @@
   .modetab.on{background:var(--purple);color:#fff;}
   .modetab:not(.on):hover{color:var(--purple-deep);}
   .modetab:focus-visible{outline:2px solid var(--purple);outline-offset:2px;}
-  .starthere .stepnote{color:var(--ink-soft);font-size:.88rem;}
+  .starthere .stepnote{color:var(--ink-2);font-size:var(--fs-secondary);line-height:1.5;}
 
   /* ---- sharing: the "shared with you" arrival strip, and Copy link ---- */
   .sharebar{background:var(--t-lime);border:1px solid #cfe0ae;border-left:4px solid var(--lime);
@@ -195,7 +209,7 @@
   .secthead{font-size:.78rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--purple);margin:1.6rem 0 .4rem;}
   @media (max-width:560px){
     .hero{padding:1.9rem 0 1.2rem;}
-    .hero h1{font-size:1.6rem;}
+    /* hero h1 is governed by clamp(--fs-hero); no fixed phone override needed */
     /* phones: while a search is live the intro block would push results below the
        first screenful, so it steps aside; clearing the box brings it straight back */
     body.searching .hero{display:none;}
@@ -204,6 +218,8 @@
     .searchbar input,.copyfall input,.field input,.field textarea,.field select{font-size:1rem;}
     .aitoggle{padding:.25rem 0;}
     .reltag{padding:.5rem .75rem;}
+    /* long jump-to labels must wrap on phones instead of running past the edge */
+    .jumps a{white-space:normal;}
     .starthere .mini-pdf{padding:.28rem .55rem;}
     /* colour key: fixed badge column + wrapping description, not ragged inline flow */
     .provkey{display:grid;grid-template-columns:1fr;gap:.55rem;}
@@ -725,7 +741,8 @@
       + ((state.view==='search'||state.view==='task') && r.topic?'<span class="chip topic">'+esc(r.topic)+'</span>':'')
       + statusChip(r)
       + (legacyLMS(r.title+' '+(r.oneLine||'')+' '+(r.concepts||[]).join(' ')+' '+(r.poly||''))?UPDATE_CHIP:'');
-    var rel = (r.related||[]).filter(byTitle).map(function(t){return '<button class="reltag" data-res="'+esc(t)+'">'+esc(t)+'</button>';}).join('');
+    var relTitles = (r.related||[]).filter(byTitle);
+    var rel = relTitles.map(function(t){return '<button class="reltag" data-res="'+esc(t)+'">'+esc(t)+'</button>';}).join('');
     var hasAi = r.ai && r.ai!=='-' && r.ai!=='—';
     // Cross-cutting lenses render at card-body level (not inside .more), gated on their
     // own toggle, so switching a lens on visibly reveals the row on every card.
@@ -754,8 +771,19 @@
       + (r.poly?'<div class="infoblock ctls"><div class="blab">Polytechnic angle <span class="prov ctls">CTLS context</span></div><p>'+esc(r.poly)+'</p></div>':'')
       + research
       + (rel?'<div style="margin-top:.6rem"><span class="lab" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:#5b6770">Related</span><div class="rel">'+rel+'</div></div>':'');
-    var moreBlock = inner ? (solo ? '<div class="more">'+inner+'</div>'
-                                  : '<button class="expand" data-expand>Details &amp; related</button><div class="more">'+inner+'</div>') : '';
+    // Count hint on the disclosure control: tell the reader what a click reveals so
+    // the substance never feels buried, even though it stays collapsed by default.
+    var hintBits=[];
+    var nConc=(r.concepts||[]).length, nRes=(r.research||[]).length;
+    if(nConc) hintBits.push(nConc+(nConc===1?' point':' points'));
+    if(nRes) hintBits.push(nRes+(nRes===1?' source':' sources'));
+    if(relTitles.length) hintBits.push(relTitles.length+' related');
+    if(!hintBits.length && r.poly) hintBits.push('context note');
+    var exHint = hintBits.length ? '<span class="exhint">'+hintBits.join(' &middot; ')+'</span>' : '';
+    var chev = '<svg class="exchev" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path d="M4 2l4 4-4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    var moreBlock = inner ? (solo
+        ? '<div class="more">'+inner+'</div>'
+        : '<button class="expand" type="button" data-expand aria-expanded="false">'+chev+'<span class="exlabel">Details &amp; related</span>'+exHint+'</button><div class="more">'+inner+'</div>') : '';
     return '<article class="rescard'+(solo?' open':'')+'" data-card="'+esc(r.title)+'"><div class="body">'
       +((state.edit&&!state.editCtx)?'<button class="cardpencil" type="button" data-edit-card="'+esc(r.title)+'" aria-label="Edit '+esc(r.title)+'">&#9998; Edit</button>':'')
       +'<h4>'+(stepNum?'<span class="stepnum">'+stepNum+'</span>':'')+esc(r.title)+'</h4>'
@@ -1965,7 +1993,10 @@
     var res=e.target.closest('[data-res]'); if(res){ e.preventDefault(); openResource(res.getAttribute('data-res')); return; }
     var ex=e.target.closest('[data-expand]'); if(ex){ var card=ex.closest('.rescard'); card.classList.toggle('open');
       var open=card.classList.contains('open');
-      ex.textContent=open?'Show less':'Details & related';
+      ex.setAttribute('aria-expanded', open?'true':'false');
+      // Update only the label span, so the chevron and count hint survive the toggle.
+      var lbl=ex.querySelector('.exlabel'); if(lbl) lbl.textContent=open?'Show less':'Details & related';
+      var hint=ex.querySelector('.exhint'); if(hint) hint.style.display=open?'none':'';
       // Collapsing a tall card can leave the viewport past the card (scroll
       // anchoring jump); pull the card back into view so hover lands sanely.
       if(!open && card.getBoundingClientRect().top<0){ card.scrollIntoView({block:'start'}); }
