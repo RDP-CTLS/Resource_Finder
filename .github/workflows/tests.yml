@@ -5,6 +5,13 @@ name: Merge tests
 
 on:
   push:
+    # main only. Without this, a push to any branch matches, including a save/** branch, which
+    # would run the test/merge code AS IT EXISTS ON THAT BRANCH (GitHub selects the workflow from
+    # the pushed ref for push events). A save branch is written by the automated upload credential,
+    # so unfiltered it is a path for branch content to execute in CI. Saves are handled by
+    # merge-saves.yml; tests belong on main and on PRs, never on a save branch.
+    branches:
+      - main
     paths:
       - '.github/scripts/**'
       - '.github/workflows/tests.yml'
